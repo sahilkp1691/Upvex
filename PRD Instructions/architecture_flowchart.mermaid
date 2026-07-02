@@ -1,0 +1,107 @@
+flowchart TD
+
+%% ============ USER ENTRY ============
+subgraph ENTRY["🟢 User Entry"]
+    A1["Landing Page"] --> A2["Sign Up / Log In"]
+    A2 -->|Supabase Auth| A3["Auth Token Issued"]
+end
+
+%% ============ ONBOARDING ============
+subgraph ONBOARD["🧩 Onboarding - Persistent Profile"]
+    A3 --> B1["Moderate Onboarding: 5-10 Questions"]
+    B1 --> B2["Learning Style"]
+    B1 --> B3["Time Availability"]
+    B1 --> B4["Motivation / Goal Context"]
+    B1 --> B5["Tech Background"]
+    B1 --> B6["Tone Preference"]
+    B2 & B3 & B4 & B5 & B6 --> B7[("User Profile (Postgres)")]
+end
+
+%% ============ GOAL + DIAGNOSTIC ============
+subgraph GOAL["🎯 Goal Setting + Diagnostic"]
+    B7 --> C1["Browse Categories, e.g. Data Engineering"]
+    C1 --> C2["Select Topic, e.g. Apache Spark"]
+    C2 --> C3["Adaptive Diagnostic Quiz, branches on difficulty"]
+    C3 --> C4{{"🤖 AGENT: Diagnostic Evaluator. 1. deterministic scoring. 2. LLM: free-text grading. 3. graph traversal to find root gap concepts"}}
+    C4 --> C5[("UserGoal record: Level Score 0-100, Concept gap map, Root gap concepts, Confidence")]
+end
+
+%% ============ CURRICULUM SKELETON / KNOWLEDGE GRAPH ============
+subgraph CURRICULUM["🗺️ Knowledge Graph (Admin-defined, Postgres DAG)"]
+    D1[("Category")] --> D2[("Topic")]
+    D2 --> D3[("ConceptNode: title + objective + bloom_level + difficulty")]
+    D3x1["Example: Distributed Storage Fundamentals"] -->|"ConceptEdge: required"| D3x2["Example: Spark Partitioning"]
+    D3x2 -->|"ConceptEdge: recommended"| D3x3["Example: Spark Optimization"]
+    D3 -.->|"schema for"| D3x1
+    D3a["is_root nodes (entry points, no prerequisites)"]
+    D3x1 -.-> D3a
+    C5 --> D4["Graph Traversal: Postgres recursive CTE, finds root gap concepts upstream of weak scores"]
+    D3 --> D4
+    D4 --> D5["User's Personalized Roadmap View: concepts marked tested-out, next, available, or locked"]
+end
+
+%% ============ CONTENT GENERATION PIPELINE ============
+subgraph GEN["⚙️ Content Generation Pipeline"]
+    D5 --> E1["User opens a ConceptNode"]
+    E1 --> E2{"Cache check: GeneratedContent table keyed by ProfileSignature (concept_node + gap + style)"}
+    E2 -->|Cache HIT| E3["Serve cached lesson + quiz"]
+    E2 -->|Cache MISS| E4["Enqueue Celery Task"]
+    E4 --> E5["Build Prompt: GenerationContract + concept objective + root_gap_concept + user variables"]
+    E5 --> E6[("🔌 OpenRouter: model selection per task")]
+    E6 --> E7["Generated Lesson + Quiz (JSON structured output)"]
+    E7 --> E8[("Store in GeneratedContent, tagged by ProfileSignature + Contract version")]
+    E8 --> E3
+end
+
+%% ============ LESSON DELIVERY + PROGRESS ============
+subgraph DELIVER["📘 Lesson Delivery"]
+    E3 --> F1["User completes lesson"]
+    F1 --> F2["Adaptive Quiz attempt"]
+    F2 --> F3{{"🤖 AGENT: Diagnostic Evaluator (re-scores concept, re-traverses graph to check root gaps resolved)"}}
+    F3 --> F4[("Update UserGoal: concept_gap_map, root_gap_concepts, progress")]
+    F4 --> D4
+end
+
+%% ============ GAMIFICATION ============
+subgraph GAME["🏆 Gamification"]
+    F1 --> G1["XP Awarded"]
+    G1 --> G2[("Streaks - daily Celery job")]
+    G1 --> G3[("Leaderboard: friends / cohort")]
+    G1 --> G4["Milestone Badges"]
+end
+
+%% ============ FUTURE: PROFILE ADVISOR ============
+subgraph FUTURE["🔮 Future Agents (post-v1)"]
+    H1{{"🤖 AGENT: Profile Advisor (pacing + tone fit)"}}
+    H2{{"🤖 AGENT: Sequencing Agent (handles messy/overlapping gaps)"}}
+    H3["Admin Chat-to-Refine on GeneratedContent"]
+    B7 -.-> H1
+    C5 -.-> H2
+    E8 -.-> H3
+end
+
+%% ============ ADMIN SIDE ============
+subgraph ADMIN["🛠️ Admin Surface"]
+    I1["Admin Login"] --> I2["Manage Categories / Topics"]
+    I2 --> I3["Define Knowledge Graph: ConceptNodes + ConceptEdges, prerequisite DAG per topic, bloom levels + difficulty"]
+    I3 --> D3
+    I1 --> I4["Edit GenerationContract: persona + template + constraints, versioned"]
+    I4 --> E5
+    I1 --> I5["Content Review Queue: view GeneratedContent"]
+    I5 -.->|v2| H3
+    I1 --> I6["Analytics: completion, drop-off, common gaps"]
+    F4 -.-> I6
+end
+
+%% ============ INFRA NOTES ============
+subgraph INFRA["🏗️ Core Infra"]
+    J1["SvelteKit Frontend"]
+    J2["FastAPI Backend"]
+    J3[("Postgres + JSONB")]
+    J4["Redis"]
+    J5["Celery Workers"]
+    J1 <--> J2
+    J2 <--> J3
+    J2 <--> J4
+    J4 <--> J5
+end

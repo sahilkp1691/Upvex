@@ -1,0 +1,24 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # Local Postgres for development without a Supabase project.
+  # Point DATABASE_URL at Supabase's Postgres instead when keys are ready.
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: upvex
+      POSTGRES_PASSWORD: upvex
+      POSTGRES_DB: upvex
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  redis_data:
+  postgres_data:
