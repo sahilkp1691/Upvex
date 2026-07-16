@@ -3,7 +3,7 @@ with Evaluator re-scoring, XP, streaks, and badges."""
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..agents import evaluator
@@ -11,12 +11,14 @@ from ..auth import get_current_user
 from ..database import get_db
 from ..models import (
     ConceptNode,
+    ConceptVisit,
     GeneratedContent,
     GenerationContract,
     LessonCompletion,
     User,
     UserGoal,
     UserProfile,
+    utcnow,
 )
 from ..config import settings
 from ..services import xp as xp_service
@@ -67,14 +69,57 @@ def _quiz_for_client(quiz_body: dict) -> dict:
     return {"questions": questions}
 
 
-def _content_payload(content: GeneratedContent) -> dict:
+def _content_payload(content: GeneratedContent, *, visit_count: int = 0, completion_count: int = 0, last_visited_at=None) -> dict:
     return {
         "status": content.status,
         "content_id": content.id,
         "lesson": content.lesson_body if content.status == "ready" else None,
         "quiz": _quiz_for_client(content.quiz_body) if content.status == "ready" and content.quiz_body else None,
         "error": content.error if content.status == "failed" else None,
+        "visit_count": visit_count,
+        "completion_count": completion_count,
+        "last_visited_at": last_visited_at.isoformat() if last_visited_at else None,
     }
+
+
+async def _record_visit_and_counts(
+    db: AsyncSession, user: User, goal: UserGoal, concept_id: str
+) -> tuple[int, int, object]:
+    """Increment visit counter on lesson open; return visit_count, completion_count, last_visited_at."""
+    visit = (
+        await db.execute(
+            select(ConceptVisit).where(
+                ConceptVisit.user_id == user.id,
+                ConceptVisit.user_goal_id == goal.id,
+                ConceptVisit.concept_node_id == concept_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if visit is None:
+        visit = ConceptVisit(
+            user_id=user.id,
+            user_goal_id=goal.id,
+            concept_node_id=concept_id,
+            visit_count=1,
+            last_visited_at=utcnow(),
+        )
+        db.add(visit)
+    else:
+        visit.visit_count = (visit.visit_count or 0) + 1
+        visit.last_visited_at = utcnow()
+
+    completion_count = (
+        await db.execute(
+            select(func.count()).select_from(LessonCompletion).where(
+                LessonCompletion.user_id == user.id,
+                LessonCompletion.user_goal_id == goal.id,
+                LessonCompletion.concept_node_id == concept_id,
+            )
+        )
+    ).scalar_one()
+
+    await db.flush()
+    return visit.visit_count, int(completion_count or 0), visit.last_visited_at
 
 
 @router.get("/content/{goal_id}/{concept_id}")
@@ -85,6 +130,10 @@ async def get_content(
     db: AsyncSession = Depends(get_db),
 ):
     goal, node, profile = await _load_context(db, goal_id, concept_id, user)
+
+    visit_count, completion_count, last_visited_at = await _record_visit_and_counts(
+        db, user, goal, concept_id
+    )
 
     contract = (
         await db.execute(select(GenerationContract).where(GenerationContract.is_active.is_(True)))
@@ -112,7 +161,13 @@ async def get_content(
     ).scalars().first()
 
     if content is not None and content.status != "failed":
-        return _content_payload(content)  # HIT (ready) or already-pending
+        await db.commit()
+        return _content_payload(
+            content,
+            visit_count=visit_count,
+            completion_count=completion_count,
+            last_visited_at=last_visited_at,
+        )
 
     # MISS (or previous failure): create a pending row and enqueue generation
     content = GeneratedContent(
@@ -132,7 +187,12 @@ async def get_content(
         await db.refresh(content)
     else:
         generate_content.delay(content.id)
-    return _content_payload(content)
+    return _content_payload(
+        content,
+        visit_count=visit_count,
+        completion_count=completion_count,
+        last_visited_at=last_visited_at,
+    )
 
 
 @router.get("/content/status/{content_id}")

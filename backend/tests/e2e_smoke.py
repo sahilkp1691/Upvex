@@ -138,6 +138,7 @@ def main():
     assert review, "content review queue has entries"
     graph = client.get(f"{BASE}/admin/topics/topic_apache_spark/graph").raise_for_status().json()
     assert graph["nodes"] and graph["edges"]
+    assert graph.get("topic_name"), "graph should include topic_name"
 
     # cycle rejection
     r = client.post(f"{BASE}/admin/topics/topic_apache_spark/edges", json={

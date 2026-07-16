@@ -47,7 +47,15 @@
 	}
 
 	function handle(res) {
-		content = res;
+		const prevVisits = content?.visit_count;
+		const prevCompletions = content?.completion_count;
+		const prevLast = content?.last_visited_at;
+		content = {
+			...res,
+			visit_count: res.visit_count ?? prevVisits ?? 0,
+			completion_count: res.completion_count ?? prevCompletions ?? 0,
+			last_visited_at: res.last_visited_at ?? prevLast ?? null
+		};
 		if (res.status === 'ready') {
 			answers = res.quiz.questions.map(() => ({ selected_option: null, answer_text: '' }));
 			phase = 'lesson';
@@ -58,6 +66,10 @@
 			phase = 'generating';
 			pollTimer = setTimeout(poll, 2000);
 		}
+	}
+
+	function plural(n, word) {
+		return `${n} ${word}${n === 1 ? '' : 's'}`;
 	}
 
 	async function poll() {
@@ -121,6 +133,14 @@
 				</svg>
 			</div>
 			<h2>{loadingMessages[loadingMsgIndex]}</h2>
+			{#if content?.visit_count}
+				<p class="visit-meta center-meta">
+					Visited {plural(content.visit_count, 'time')} · Completed {plural(
+						content.completion_count ?? 0,
+						'time'
+					)}
+				</p>
+			{/if}
 			<p class="muted">
 				Upvex is generating this lesson specifically for your profile — your level, your gaps, your
 				style. First time takes a moment; it's cached for you and similar learners after.
@@ -135,6 +155,14 @@
 	{:else if phase === 'lesson' && content?.lesson}
 		<article class="lesson">
 			<a href={`/roadmap/${goalId}`} class="back">Back to roadmap</a>
+			{#if content.visit_count != null}
+				<p class="visit-meta">
+					Visited {plural(content.visit_count, 'time')} · Completed {plural(
+						content.completion_count ?? 0,
+						'time'
+					)}
+				</p>
+			{/if}
 			<h1>{content.lesson.title}</h1>
 			<p class="intro">{content.lesson.intro}</p>
 
@@ -277,6 +305,17 @@
 		margin-bottom: 18px;
 		color: var(--text-dim);
 		font-size: 14px;
+	}
+
+	.visit-meta {
+		margin: -8px 0 10px;
+		font-size: 13px;
+		color: var(--text-faint);
+		letter-spacing: 0.01em;
+	}
+
+	.visit-meta.center-meta {
+		margin: 0 0 12px;
 	}
 
 	.intro {

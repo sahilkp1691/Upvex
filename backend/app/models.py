@@ -205,6 +205,22 @@ class LessonCompletion(Base):
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class ConceptVisit(Base):
+    """Per-user counter of how many times a concept lesson was opened."""
+
+    __tablename__ = "concept_visits"
+    __table_args__ = (
+        UniqueConstraint("user_id", "user_goal_id", "concept_node_id", name="uq_concept_visit"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    user_goal_id: Mapped[str] = mapped_column(ForeignKey("user_goals.id"), index=True)
+    concept_node_id: Mapped[str] = mapped_column(ForeignKey("concept_nodes.id"), index=True)
+    visit_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_visited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class XPLedger(Base):
     __tablename__ = "xp_ledger"
 

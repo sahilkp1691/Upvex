@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { get, patch } from '$lib/api.js';
+	import { layoutDag, DEFAULT_NODE_W as NODE_W, DEFAULT_NODE_H as NODE_H } from '$lib/graphLayout.js';
 	import { pushToast } from '$lib/stores.js';
 
 	const goalId = page.params.goalId;
@@ -9,11 +10,6 @@
 	let roadmap = $state(null);
 	let loading = $state(true);
 	let pacingBusy = $state(false);
-
-	const NODE_W = 230;
-	const NODE_H = 96;
-	const GAP_X = 26;
-	const GAP_Y = 70;
 
 	$effect(() => {
 		load();
@@ -30,63 +26,7 @@
 		}
 	}
 
-	/** Longest-path layering: layer(n) = 1 + max(layer of prerequisites). */
-	let layout = $derived.by(() => {
-		if (!roadmap) return null;
-		const nodes = roadmap.nodes;
-		const preds = {};
-		for (const e of roadmap.edges) (preds[e.to] ??= []).push(e.from);
-
-		const layerOf = {};
-		const resolve = (id, seen = new Set()) => {
-			if (layerOf[id] !== undefined) return layerOf[id];
-			if (seen.has(id)) return 0; // defensive: cycles shouldn't exist
-			seen.add(id);
-			const ps = preds[id] || [];
-			const layer = ps.length ? 1 + Math.max(...ps.map((p) => resolve(p, seen))) : 0;
-			layerOf[id] = layer;
-			return layer;
-		};
-		nodes.forEach((n) => resolve(n.id));
-
-		const layers = [];
-		for (const n of nodes) (layers[layerOf[n.id]] ??= []).push(n);
-		layers.forEach((l) => l.sort((a, b) => a.title.localeCompare(b.title)));
-
-		const maxPerLayer = Math.max(...layers.map((l) => l.length));
-		const width = maxPerLayer * (NODE_W + GAP_X) + GAP_X;
-		const height = layers.length * (NODE_H + GAP_Y) + GAP_Y;
-
-		const pos = {};
-		layers.forEach((layerNodes, li) => {
-			const rowWidth = layerNodes.length * (NODE_W + GAP_X) - GAP_X;
-			const startX = (width - rowWidth) / 2;
-			layerNodes.forEach((n, i) => {
-				pos[n.id] = {
-					x: startX + i * (NODE_W + GAP_X),
-					y: GAP_Y / 2 + li * (NODE_H + GAP_Y)
-				};
-			});
-		});
-
-		const paths = roadmap.edges
-			.filter((e) => pos[e.from] && pos[e.to])
-			.map((e) => {
-				const a = pos[e.from];
-				const b = pos[e.to];
-				const x1 = a.x + NODE_W / 2;
-				const y1 = a.y + NODE_H;
-				const x2 = b.x + NODE_W / 2;
-				const y2 = b.y;
-				const my = (y1 + y2) / 2;
-				return {
-					d: `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`,
-					type: e.type
-				};
-			});
-
-		return { pos, paths, width, height, nodes };
-	});
+	let layout = $derived(roadmap ? layoutDag(roadmap) : null);
 
 	async function setPacing(choice) {
 		pacingBusy = true;
@@ -186,7 +126,15 @@
 								{#if node.is_root_gap}<span class="n-gap">root gap</span>{/if}
 								{#if node.score !== null}<span class="n-score">{Math.round(node.score)}</span>{/if}
 							</span>
-							<span class="n-dur">{node.estimated_duration_mins} min · {node.difficulty_tag}</span>
+							<span class="n-dur">
+								{node.estimated_duration_mins} min · {node.difficulty_tag}
+								{#if (node.visit_count ?? 0) > 0}
+									· visited {node.visit_count}x
+									{#if (node.completion_count ?? 0) > 0}
+										· done {node.completion_count}x
+									{/if}
+								{/if}
+							</span>
 						</button>
 					{/each}
 				</div>

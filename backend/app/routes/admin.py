@@ -123,6 +123,9 @@ class ConceptEdgePayload(BaseModel):
 
 @router.get("/topics/{topic_id}/graph")
 async def get_graph(topic_id: str, db: AsyncSession = Depends(get_db)):
+    topic = await db.get(Topic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "Topic not found")
     nodes = (
         await db.execute(select(ConceptNode).where(ConceptNode.topic_id == topic_id))
     ).scalars().all()
@@ -130,6 +133,8 @@ async def get_graph(topic_id: str, db: AsyncSession = Depends(get_db)):
         await db.execute(select(ConceptEdge).where(ConceptEdge.topic_id == topic_id))
     ).scalars().all()
     return {
+        "topic_id": topic.id,
+        "topic_name": topic.name,
         "nodes": [
             {
                 "id": n.id, "title": n.title, "learning_objective": n.learning_objective,
@@ -218,6 +223,20 @@ async def create_edge(topic_id: str, payload: ConceptEdgePayload, db: AsyncSessi
     db.add(edge)
     await db.commit()
     return {"id": edge.id}
+
+
+class ConceptEdgeUpdatePayload(BaseModel):
+    edge_type: str = Field(pattern="^(required|recommended)$")
+
+
+@router.patch("/edges/{edge_id}")
+async def update_edge(edge_id: str, payload: ConceptEdgeUpdatePayload, db: AsyncSession = Depends(get_db)):
+    edge = await db.get(ConceptEdge, edge_id)
+    if edge is None:
+        raise HTTPException(404, "Edge not found")
+    edge.edge_type = payload.edge_type
+    await db.commit()
+    return {"ok": True}
 
 
 @router.delete("/edges/{edge_id}")
