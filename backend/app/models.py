@@ -39,6 +39,9 @@ class User(Base):
     auth_provider_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)  # Supabase user id
     display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Mirrors Supabase's email confirmation state (from the JWT user_metadata claim).
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     profile: Mapped["UserProfile | None"] = relationship(back_populates="user", uselist=False)

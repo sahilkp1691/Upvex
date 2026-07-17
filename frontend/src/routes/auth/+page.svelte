@@ -1,16 +1,25 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { supabase, authEnabled } from '$lib/supabase.js';
+	import { supabase, authEnabled, getAuthRedirectUrl } from '$lib/supabase.js';
 	import { get } from '$lib/api.js';
-	import { currentUser } from '$lib/stores.js';
+	import { formatAuthError } from '$lib/authErrors.js';
+	import { currentUser, userLoaded } from '$lib/stores.js';
 	import Logo from '$lib/Logo.svelte';
 
 	let mode = $state('signin'); // signin | signup
 	let email = $state('');
 	let password = $state('');
+	let code = $state('');
 	let error = $state('');
 	let notice = $state('');
 	let busy = $state(false);
+	let pendingVerification = $state(false);
+
+	$effect(() => {
+		if ($userLoaded && $currentUser) {
+			goto($currentUser.onboarded ? '/topics' : '/onboarding');
+		}
+	});
 
 	async function afterAuth() {
 		const me = await get('/me');
@@ -18,10 +27,55 @@
 		goto(me.onboarded ? '/topics' : '/onboarding');
 	}
 
+	function authOptions() {
+		return { emailRedirectTo: getAuthRedirectUrl() };
+	}
+
+	async function resendConfirmation() {
+		error = '';
+		notice = '';
+		busy = true;
+		try {
+			const { error: err } = await supabase.auth.resend({
+				type: 'signup',
+				email,
+				options: authOptions()
+			});
+			if (err) throw err;
+			notice = 'New code sent. Check your inbox.';
+		} catch (err) {
+			error = formatAuthError(err, 'signup');
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function verifyCode(e) {
+		e.preventDefault();
+		error = '';
+		notice = '';
+		busy = true;
+		try {
+			const { error: err } = await supabase.auth.verifyOtp({
+				email,
+				token: code.trim(),
+				type: 'signup'
+			});
+			if (err) throw err;
+			// verifyOtp establishes a session; hydrate the backend user and route on.
+			await afterAuth();
+		} catch (err) {
+			error = formatAuthError(err, 'signup');
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function submit(e) {
 		e.preventDefault();
 		error = '';
 		notice = '';
+		pendingVerification = false;
 		busy = true;
 		try {
 			if (!authEnabled) {
@@ -30,17 +84,38 @@
 				return;
 			}
 			if (mode === 'signup') {
-				const { data, error: err } = await supabase.auth.signUp({ email, password });
+				const { data, error: err } = await supabase.auth.signUp({
+					email,
+					password,
+					options: authOptions()
+				});
 				if (err) throw err;
-				if (data.session) await afterAuth();
-				else notice = 'Check your email to confirm your account, then sign in.';
+				// Supabase returns a session only when Confirm email is off (auto-confirm).
+				// Treat that as a misconfiguration for this product — require verification.
+				if (data.session) {
+					await supabase.auth.signOut();
+					currentUser.set(null);
+					error =
+						'Email confirmation is not being enforced by Supabase (account was auto-confirmed). In the dashboard, turn Confirm email OFF, Save, then ON and Save again, then retry with a new email.';
+					return;
+				}
+				if (data.user?.identities?.length === 0) {
+					error = 'An account with this email already exists. Sign in instead.';
+					mode = 'signin';
+					pendingVerification = false;
+				} else {
+					pendingVerification = true;
+					notice = '';
+				}
 			} else {
 				const { error: err } = await supabase.auth.signInWithPassword({ email, password });
 				if (err) throw err;
 				await afterAuth();
 			}
 		} catch (err) {
-			error = err.message || 'Authentication failed';
+			const message = formatAuthError(err, mode);
+			error = message;
+			if (/confirm/i.test(message)) pendingVerification = true;
 		} finally {
 			busy = false;
 		}
@@ -60,6 +135,50 @@
 			<button class="btn btn-primary full" onclick={submit} disabled={busy}>
 				Continue as Dev User
 			</button>
+		{:else if pendingVerification}
+			<div class="verify-panel">
+				<h1 class="verify-title">Enter your code</h1>
+				<p class="muted verify-copy">
+					We sent a 6-digit verification code to <strong>{email}</strong>. Enter it below to
+					activate your account.
+				</p>
+				<form onsubmit={verifyCode}>
+					<input
+						id="code"
+						class="input code-input"
+						type="text"
+						inputmode="numeric"
+						autocomplete="one-time-code"
+						maxlength="6"
+						placeholder="000000"
+						bind:value={code}
+						oninput={() => (code = code.replace(/\D/g, ''))}
+						required
+					/>
+					<button class="btn btn-primary full" type="submit" disabled={busy || code.trim().length !== 6}>
+						{busy ? 'Verifying…' : 'Verify and continue'}
+					</button>
+				</form>
+				{#if notice}<p class="notice">{notice}</p>{/if}
+				{#if error}<p class="error">{error}</p>{/if}
+				<button class="btn full resend" type="button" onclick={resendConfirmation} disabled={busy}>
+					{busy ? 'Sending…' : 'Resend code'}
+				</button>
+				<button
+					class="btn full resend"
+					type="button"
+					disabled={busy}
+					onclick={() => {
+						pendingVerification = false;
+						code = '';
+						error = '';
+						notice = '';
+						mode = 'signin';
+					}}
+				>
+					Back to sign in
+				</button>
+			</div>
 		{:else}
 			<div class="tabs">
 				<button class:active={mode === 'signin'} onclick={() => (mode = 'signin')}>Sign in</button>
@@ -83,10 +202,9 @@
 					{mode === 'signin' ? 'Sign in' : 'Create account'}
 				</button>
 			</form>
+			{#if error}<p class="error">{error}</p>{/if}
+			{#if notice}<p class="notice">{notice}</p>{/if}
 		{/if}
-
-		{#if error}<p class="error">{error}</p>{/if}
-		{#if notice}<p class="notice">{notice}</p>{/if}
 	</div>
 </div>
 
@@ -156,5 +274,35 @@
 		margin-top: 14px;
 		color: var(--up);
 		font-size: 14px;
+	}
+
+	.verify-panel {
+		text-align: center;
+	}
+
+	.verify-title {
+		font-size: 1.25rem;
+		margin: 0 0 10px;
+	}
+
+	.verify-copy {
+		font-size: 14px;
+		line-height: 1.45;
+		margin: 0 0 8px;
+	}
+
+	.verify-copy strong {
+		color: var(--text);
+	}
+
+	.resend {
+		margin-top: 12px;
+	}
+
+	.code-input {
+		text-align: center;
+		font-size: 22px;
+		letter-spacing: 0.4em;
+		font-variant-numeric: tabular-nums;
 	}
 </style>

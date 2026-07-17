@@ -6,7 +6,7 @@ Table creation itself uses SQLAlchemy metadata (create_all is already idempotent
 
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .database import Base, async_session_factory, engine
@@ -67,11 +67,29 @@ async def _seed_badges(session: AsyncSession) -> None:
         session.add(Badge(**b))
 
 
+async def _add_user_email_verified(session: AsyncSession) -> None:
+    """Add users.email_verified / email_verified_at to pre-existing databases.
+
+    Fresh databases already get these via create_all, so we only ALTER when the
+    columns are missing. Dialect-aware so tests (SQLite) stay happy too.
+    """
+    conn = await session.connection()
+    existing = await conn.run_sync(lambda c: {col["name"] for col in inspect(c).get_columns("users")})
+    ts_type = "TIMESTAMPTZ" if conn.dialect.name == "postgresql" else "TIMESTAMP"
+    if "email_verified" not in existing:
+        await session.execute(
+            text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE")
+        )
+    if "email_verified_at" not in existing:
+        await session.execute(text(f"ALTER TABLE users ADD COLUMN email_verified_at {ts_type}"))
+
+
 MIGRATION_STEPS = [
     ("0001_seed_catalog", _seed_catalog),
     ("0002_seed_diagnostic_questions", _seed_questions),
     ("0003_seed_generation_contract_v1", _seed_contract),
     ("0004_seed_badges", _seed_badges),
+    ("0005_add_user_email_verified", _add_user_email_verified),
 ]
 
 

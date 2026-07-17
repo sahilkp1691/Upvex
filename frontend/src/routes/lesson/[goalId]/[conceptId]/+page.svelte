@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { get, post } from '$lib/api.js';
+	import { renderMarkdown } from '$lib/markdown.js';
 	import { pushToast } from '$lib/stores.js';
 
 	const goalId = page.params.goalId;
@@ -169,7 +170,7 @@
 			{#each content.lesson.sections as section, i (i)}
 				<section>
 					<h2>{section.heading}</h2>
-					<p class="body-text">{section.body}</p>
+					<div class="md-body">{@html renderMarkdown(section.body)}</div>
 					{#if section.code_example}
 						<pre><code>{section.code_example.code}</code></pre>
 					{/if}
@@ -327,8 +328,99 @@
 		margin-top: 28px;
 	}
 
-	.body-text {
-		white-space: pre-wrap;
+	.md-body {
+		font-size: 15.5px;
+		color: var(--text);
+	}
+
+	.md-body :global(p) {
+		margin: 0 0 0.9em;
+	}
+
+	.md-body :global(p:last-child) {
+		margin-bottom: 0;
+	}
+
+	.md-body :global(ul),
+	.md-body :global(ol) {
+		margin: 0 0 0.9em;
+		padding-left: 1.35em;
+	}
+
+	.md-body :global(li) {
+		margin-bottom: 0.35em;
+	}
+
+	.md-body :global(strong) {
+		font-weight: 650;
+		color: var(--text);
+	}
+
+	.md-body :global(blockquote) {
+		margin: 0 0 0.9em;
+		padding: 8px 14px;
+		border-left: 3px solid var(--accent);
+		color: var(--text-dim);
+		background: var(--bg-elevated);
+		border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+	}
+
+	.md-body :global(pre) {
+		margin: 0 0 0.9em;
+	}
+
+	.md-body :global(.table-wrap) {
+		width: 100%;
+		max-width: 100%;
+		overflow-x: auto;
+		margin: 1em 0;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+	}
+
+	.md-body :global(table) {
+		width: 100%;
+		min-width: 520px;
+		border-collapse: collapse;
+		font-size: 14px;
+		line-height: 1.45;
+		margin: 0;
+	}
+
+	.md-body :global(thead) {
+		background: var(--bg-elevated);
+	}
+
+	.md-body :global(th),
+	.md-body :global(td) {
+		padding: 10px 14px;
+		text-align: left;
+		vertical-align: top;
+		border-bottom: 1px solid var(--border);
+		border-right: 1px solid var(--border);
+	}
+
+	.md-body :global(th:last-child),
+	.md-body :global(td:last-child) {
+		border-right: none;
+	}
+
+	.md-body :global(tbody tr:last-child td) {
+		border-bottom: none;
+	}
+
+	.md-body :global(th) {
+		font-weight: 650;
+		color: var(--text);
+		white-space: nowrap;
+	}
+
+	.md-body :global(td) {
+		color: var(--text-dim);
+	}
+
+	.md-body :global(tr:hover td) {
+		background: var(--bg-hover);
 	}
 
 	.takeaways {

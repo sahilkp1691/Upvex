@@ -8,3 +8,9 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = url && anonKey ? createClient(url, anonKey) : null;
 
 export const authEnabled = supabase !== null;
+
+/** Where Supabase sends users after they click a confirmation or recovery link. */
+export function getAuthRedirectUrl() {
+	if (typeof window === 'undefined') return '';
+	return `${window.location.origin}/auth`;
+}

@@ -42,6 +42,7 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
         "email": user.email,
         "display_name": user.display_name,
         "is_admin": user.is_admin,
+        "email_verified": user.email_verified,
         "onboarded": profile is not None,
         "profile": _profile_dict(profile),
     }

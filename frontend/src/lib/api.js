@@ -20,11 +20,19 @@ async function authHeaders() {
 export async function api(path, { method = 'GET', body } = {}) {
 	const headers = { ...(await authHeaders()) };
 	if (body !== undefined) headers['Content-Type'] = 'application/json';
-	const res = await fetch(`${API_URL}/api${path}`, {
-		method,
-		headers,
-		body: body !== undefined ? JSON.stringify(body) : undefined
-	});
+	let res;
+	try {
+		res = await fetch(`${API_URL}/api${path}`, {
+			method,
+			headers,
+			body: body !== undefined ? JSON.stringify(body) : undefined
+		});
+	} catch {
+		throw new ApiError(
+			0,
+			'Could not reach the server. Make sure the backend is running and try again.'
+		);
+	}
 	if (!res.ok) {
 		let detail = null;
 		try {
