@@ -125,9 +125,11 @@ def main():
         f"{BASE}/gamification/summary"
     ).raise_for_status().json())
     assert summary["total_xp"] > 0
+    assert summary.get("level", 0) >= 1
     board = client.get(f"{BASE}/gamification/leaderboard").raise_for_status().json()
     assert board["entries"], "leaderboard has entries"
-    print(f"     xp={summary['total_xp']} streak={summary['streak']['current']} badges={len(summary['badges'])}")
+    assert "my_rank" in board and "my_xp" in board
+    print(f"     xp={summary['total_xp']} level={summary['level']} streak={summary['streak']['current']} badges={len(summary['badges'])}")
 
     # admin surface
     analytics = step("admin analytics", lambda: client.get(f"{BASE}/admin/analytics").raise_for_status().json())

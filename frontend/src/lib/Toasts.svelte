@@ -29,7 +29,7 @@
 		border-left: 3px solid var(--accent);
 		border-radius: var(--radius-sm);
 		padding: 12px 16px;
-		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+		box-shadow: var(--shadow);
 		display: flex;
 		flex-direction: column;
 		gap: 2px;

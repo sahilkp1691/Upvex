@@ -20,9 +20,17 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
-		font-weight: 750;
+		font-family: var(--font-display);
+		font-weight: 800;
 		font-size: calc(var(--s) * 0.78);
-		letter-spacing: -0.02em;
+		letter-spacing: -0.03em;
 		color: var(--text);
+	}
+
+	.word {
+		background: linear-gradient(120deg, var(--accent-bright), var(--up));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
 	}
 </style>

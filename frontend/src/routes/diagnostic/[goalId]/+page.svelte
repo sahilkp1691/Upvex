@@ -128,7 +128,7 @@
 	{:else if phase === 'results' && results}
 		<div class="results">
 			<div class="level-block card">
-				<span class="label">Your starting level</span>
+				<span class="label">Your starting skill</span>
 				<div class="level-num">{Math.round(results.level_score)}</div>
 				<span class="muted">out of 100 · confidence {Math.round(results.confidence * 100)}%</span>
 			</div>
@@ -212,12 +212,12 @@
 	}
 
 	.option:hover {
-		border-color: var(--accent);
+		border-color: var(--up);
 	}
 
 	.option.selected {
-		border-color: var(--accent);
-		background: var(--accent-soft);
+		border-color: var(--up);
+		background: var(--up-soft);
 	}
 
 	.submit {

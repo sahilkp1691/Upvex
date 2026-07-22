@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { get, post } from '$lib/api.js';
 	import { renderMarkdown } from '$lib/markdown.js';
-	import { pushToast } from '$lib/stores.js';
+	import LessonVisual from '$lib/LessonVisual.svelte';
+	import { pushToast, gamification, refreshGamification } from '$lib/stores.js';
+	import { get as getStore } from 'svelte/store';
 
 	const goalId = page.params.goalId;
 	const conceptId = page.params.conceptId;
@@ -13,6 +15,8 @@
 	let error = $state('');
 	let pollTimer = null;
 	let loadingMsgIndex = $state(0);
+	let leveledUp = $state(false);
+	let previousLevel = $state(null);
 
 	const loadingMessages = [
 		'Crafting your lesson...',
@@ -99,6 +103,9 @@
 
 	async function submitQuiz() {
 		submittingQuiz = true;
+		leveledUp = false;
+		const before = getStore(gamification);
+		previousLevel = before?.level ?? null;
 		try {
 			quizResult = await post(`/content/${goalId}/${conceptId}/submit-quiz`, {
 				generated_content_id: content.content_id,
@@ -109,9 +116,16 @@
 				}))
 			});
 			phase = 'done';
+			if (previousLevel != null && quizResult.level > previousLevel) {
+				leveledUp = true;
+			}
+			await refreshGamification(get);
 			pushToast(`+${quizResult.xp_earned} XP`, `Streak: ${quizResult.streak.current} days`, 'xp');
 			for (const b of quizResult.badges_earned) {
 				pushToast(`Badge earned: ${b.name}`, b.description, 'badge', 6000);
+			}
+			if (leveledUp) {
+				pushToast(`Level up!`, `You reached level ${quizResult.level}`, 'xp', 5000);
 			}
 		} catch (err) {
 			pushToast('Quiz submission failed', err.message, 'error');
@@ -119,6 +133,19 @@
 			submittingQuiz = false;
 		}
 	}
+
+	let levelPct = $derived(
+		quizResult?.xp_to_next_level != null
+			? Math.min(
+					100,
+					Math.round(
+						(quizResult.xp_into_level /
+							(quizResult.xp_into_level + quizResult.xp_to_next_level || 1)) *
+							100
+					)
+				)
+			: 0
+	);
 </script>
 
 <svelte:head><title>Lesson — Upvex</title></svelte:head>
@@ -171,6 +198,9 @@
 				<section>
 					<h2>{section.heading}</h2>
 					<div class="md-body">{@html renderMarkdown(section.body)}</div>
+					{#if section.visual}
+						<LessonVisual visual={section.visual} />
+					{/if}
 					{#if section.code_example}
 						<pre><code>{section.code_example.code}</code></pre>
 					{/if}
@@ -234,17 +264,48 @@
 		</div>
 	{:else if phase === 'done' && quizResult}
 		<div class="done">
+			{#if leveledUp}
+				<div class="level-up-banner">Level up — you reached level {quizResult.level}</div>
+			{/if}
+
 			<div class="card score-card">
 				<span class="label">Quiz score</span>
 				<div class="score-num">{Math.round(quizResult.quiz_score)}</div>
-				<p class="muted">
-					+{quizResult.xp_earned} XP · streak {quizResult.streak.current}
-					day{quizResult.streak.current === 1 ? '' : 's'}
-				</p>
+				<div class="reward-row">
+					<span class="reward xp">+{quizResult.xp_earned} XP</span>
+					<span class="reward streak">
+						{quizResult.streak.current} day streak
+					</span>
+					{#if quizResult.level}
+						<span class="reward lvl">Level {quizResult.level}</span>
+					{/if}
+				</div>
+				{#if quizResult.xp_to_next_level != null}
+					<div class="level-progress">
+						<div class="progress-bar">
+							<span style="width: {levelPct}%"></span>
+						</div>
+						<span class="faint lp-meta"
+							>{quizResult.xp_to_next_level} XP to level {quizResult.level + 1}</span
+						>
+					</div>
+				{/if}
 				{#if quizResult.root_gap_resolved}
 					<p class="resolved">Root gap resolved — concepts that depended on this just got closer.</p>
 				{/if}
 			</div>
+
+			{#if quizResult.badges_earned?.length}
+				<div class="badge-reveal">
+					{#each quizResult.badges_earned as b (b.id)}
+						<div class="badge-tile earned">
+							<span class="tag tag-gold">New badge</span>
+							<span class="b-name">{b.name}</span>
+							<span class="b-desc">{b.description}</span>
+						</div>
+					{/each}
+				</div>
+			{/if}
 
 			<div class="card review">
 				<h3>Answer review</h3>
@@ -473,12 +534,12 @@
 	}
 
 	.option:hover {
-		border-color: var(--accent);
+		border-color: var(--up);
 	}
 
 	.option.selected {
-		border-color: var(--accent);
-		background: var(--accent-soft);
+		border-color: var(--up);
+		background: var(--up-soft);
 	}
 
 	.done {
@@ -493,8 +554,9 @@
 	}
 
 	.score-num {
+		font-family: var(--font-display);
 		font-size: 58px;
-		font-weight: 750;
+		font-weight: 800;
 		background: linear-gradient(100deg, var(--accent-bright), var(--up));
 		-webkit-background-clip: text;
 		background-clip: text;
@@ -502,10 +564,60 @@
 		line-height: 1.1;
 	}
 
+	.reward-row {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 10px;
+		margin-top: 8px;
+	}
+
+	.reward {
+		font-size: 13.5px;
+		font-weight: 650;
+		padding: 5px 12px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--bg-elevated);
+	}
+
+	.reward.xp {
+		color: var(--gold);
+		border-color: color-mix(in srgb, var(--gold) 40%, var(--border));
+	}
+
+	.reward.streak {
+		color: var(--warn);
+		border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+	}
+
+	.reward.lvl {
+		color: var(--up);
+		border-color: color-mix(in srgb, var(--up) 40%, var(--border));
+	}
+
+	.level-progress {
+		margin: 18px auto 0;
+		max-width: 280px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.lp-meta {
+		font-size: 12.5px;
+	}
+
+	.badge-reveal {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		gap: 12px;
+	}
+
 	.resolved {
 		color: var(--up);
 		font-weight: 600;
-		margin-top: 10px;
+		margin-top: 14px;
 	}
 
 	.review-row {

@@ -68,7 +68,7 @@
 			<div>
 				<h1>{roadmap.topic_name}</h1>
 				<p class="muted">
-					Level {Math.round(roadmap.level_score ?? 0)} · pick any unlocked concept — root gaps
+					Skill {Math.round(roadmap.level_score ?? 0)} · pick any unlocked concept — root gaps
 					marked first unlock the most.
 				</p>
 			</div>
@@ -177,9 +177,9 @@
 	}
 
 	.pace.active {
-		background: var(--accent-soft);
-		border-color: var(--accent);
-		color: var(--accent-bright);
+		background: var(--up-soft);
+		border-color: var(--up);
+		color: var(--up);
 	}
 
 	.deadline {
@@ -210,7 +210,7 @@
 	}
 
 	.dot.next {
-		background: var(--accent);
+		background: var(--up);
 	}
 
 	.dot.avail {
@@ -266,17 +266,17 @@
 
 	.node:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+		box-shadow: var(--shadow);
 	}
 
 	.node.recommended_next {
-		border-color: var(--accent);
-		box-shadow: 0 0 0 1px var(--accent), 0 0 22px rgba(79, 124, 255, 0.25);
+		border-color: var(--up);
+		box-shadow: 0 0 0 1px var(--up), 0 0 22px color-mix(in srgb, var(--up) 28%, transparent);
 	}
 
 	.node.completed,
 	.node.tested_out {
-		border-color: rgba(52, 211, 153, 0.5);
+		border-color: color-mix(in srgb, var(--up) 50%, transparent);
 		opacity: 0.82;
 	}
 
@@ -307,7 +307,7 @@
 	}
 
 	.node.recommended_next .n-state {
-		color: var(--accent-bright);
+		color: var(--up);
 	}
 
 	.node.completed .n-state,

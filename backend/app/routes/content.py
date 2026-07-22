@@ -304,7 +304,15 @@ async def submit_quiz(
         db, user.id, goal=goal,
         root_gap_resolved=root_gap_resolved,
         lessons_completed_total=lessons_total,
+        quiz_score=quiz_score,
     )
+
+    # Include milestone XP in the reported earn total
+    earned_xp += xp_service.XP_MILESTONE * len(badges)
+
+    await db.flush()
+    total = await xp_service.total_xp(db, user.id)
+    progress = xp_service.level_from_xp(total)
 
     await db.commit()
 
@@ -315,6 +323,11 @@ async def submit_quiz(
         "xp_earned": earned_xp,
         "streak": {"current": streak.current_streak, "longest": streak.longest_streak},
         "badges_earned": [{"id": b.id, "name": b.name, "description": b.description} for b in badges],
+        "level": progress["level"],
+        "xp_into_level": progress["xp_into_level"],
+        "xp_to_next_level": progress["xp_to_next_level"],
+        "next_level_at": progress["next_level_at"],
+        "total_xp": total,
         "root_gap_resolved": root_gap_resolved,
         "root_gap_concepts": output["root_gap_concepts"],
         "gap_reasoning": output["gap_reasoning"],

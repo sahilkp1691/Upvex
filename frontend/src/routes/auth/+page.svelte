@@ -5,6 +5,7 @@
 	import { formatAuthError } from '$lib/authErrors.js';
 	import { currentUser, userLoaded } from '$lib/stores.js';
 	import Logo from '$lib/Logo.svelte';
+	import ThemeToggle from '$lib/ThemeToggle.svelte';
 
 	let mode = $state('signin'); // signin | signup
 	let email = $state('');
@@ -124,9 +125,13 @@
 
 <svelte:head><title>Sign in — Upvex</title></svelte:head>
 
-<div class="auth-wrap">
-	<div class="card auth-card">
-		<div class="head"><Logo size={26} /></div>
+<div class="auth-wrap mesh-bg">
+	<div class="auth-top">
+		<a href="/" class="back muted">Back</a>
+		<ThemeToggle />
+	</div>
+	<div class="auth-card">
+		<div class="head"><Logo size={28} /></div>
 
 		{#if !authEnabled}
 			<p class="muted dev-note">
@@ -211,42 +216,63 @@
 <style>
 	.auth-wrap {
 		display: flex;
-		justify-content: center;
-		padding: 90px 20px;
+		flex-direction: column;
+		align-items: center;
+		min-height: 100vh;
+		padding: 24px 20px 80px;
+	}
+
+	.auth-top {
+		width: 100%;
+		max-width: 400px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 40px;
+	}
+
+	.back:hover {
+		color: var(--text);
+		text-decoration: none;
 	}
 
 	.auth-card {
 		width: 100%;
 		max-width: 400px;
+		padding: 8px 0;
 	}
 
 	.head {
 		display: flex;
 		justify-content: center;
-		margin-bottom: 20px;
+		margin-bottom: 28px;
 	}
 
 	.tabs {
 		display: flex;
 		gap: 6px;
 		margin-bottom: 20px;
+		padding: 4px;
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		border: 1px solid var(--border);
 	}
 
 	.tabs button {
 		flex: 1;
 		padding: 9px;
 		border-radius: var(--radius-sm);
-		border: 1px solid var(--border);
-		background: var(--bg-elevated);
+		border: 1px solid transparent;
+		background: transparent;
 		color: var(--text-dim);
 		font-weight: 550;
 		cursor: pointer;
 	}
 
 	.tabs button.active {
-		background: var(--accent-soft);
-		border-color: var(--accent);
-		color: var(--accent-bright);
+		background: var(--up-soft);
+		border-color: color-mix(in srgb, var(--up) 35%, transparent);
+		color: var(--up);
 	}
 
 	.label {

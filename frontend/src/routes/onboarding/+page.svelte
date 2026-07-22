@@ -3,6 +3,7 @@
 	import { post, get } from '$lib/api.js';
 	import { currentUser, userLoaded } from '$lib/stores.js';
 	import Logo from '$lib/Logo.svelte';
+	import ThemeToggle from '$lib/ThemeToggle.svelte';
 
 	const steps = [
 		{
@@ -111,7 +112,10 @@
 <svelte:head><title>Welcome — Upvex</title></svelte:head>
 
 <div class="page onboard">
-	<div class="head"><Logo size={24} /></div>
+	<div class="head">
+		<Logo size={24} />
+		<ThemeToggle />
+	</div>
 
 	<div class="progress">
 		{#each steps as s, i (s.key)}
@@ -119,7 +123,7 @@
 		{/each}
 	</div>
 
-	<div class="card step-card">
+	<div class="step-card">
 		<h2>{step.title}</h2>
 		<p class="muted">{step.sub}</p>
 
@@ -172,7 +176,8 @@
 
 	.head {
 		display: flex;
-		justify-content: center;
+		justify-content: space-between;
+		align-items: center;
 		margin-bottom: 26px;
 	}
 
@@ -194,11 +199,11 @@
 	}
 
 	.seg.current {
-		background: var(--accent);
+		background: var(--up);
 	}
 
 	.step-card {
-		padding: 30px;
+		padding: 8px 0 30px;
 	}
 
 	.name-input {
@@ -231,12 +236,12 @@
 	}
 
 	.option:hover {
-		border-color: var(--accent);
+		border-color: var(--up);
 	}
 
 	.option.selected {
-		border-color: var(--accent);
-		background: var(--accent-soft);
+		border-color: var(--up);
+		background: var(--up-soft);
 	}
 
 	.opt-label {

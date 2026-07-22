@@ -13,6 +13,7 @@ router = APIRouter()
 @router.get("/gamification/summary")
 async def summary(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     total = await xp_service.total_xp(db, user.id)
+    progress = xp_service.level_from_xp(total)
     streak = await db.get(Streak, user.id)
     badge_rows = (
         await db.execute(
@@ -30,6 +31,10 @@ async def summary(user: User = Depends(get_current_user), db: AsyncSession = Dep
     ).scalars().all()
     return {
         "total_xp": total,
+        "level": progress["level"],
+        "xp_into_level": progress["xp_into_level"],
+        "xp_to_next_level": progress["xp_to_next_level"],
+        "next_level_at": progress["next_level_at"],
         "streak": {
             "current": streak.current_streak if streak else 0,
             "longest": streak.longest_streak if streak else 0,
@@ -49,8 +54,22 @@ async def summary(user: User = Depends(get_current_user), db: AsyncSession = Dep
 @router.get("/gamification/leaderboard")
 async def get_leaderboard(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = await xp_service.leaderboard(db, days=7, limit=20)
-    me_rank = next((r["rank"] for r in rows if r["user_id"] == user.id), None)
-    return {"window_days": 7, "entries": rows, "my_rank": me_rank}
+    me_rank, my_xp = await xp_service.user_weekly_rank(db, user.id, days=7)
+    me = None
+    if me_rank is not None:
+        me = {
+            "rank": me_rank,
+            "user_id": user.id,
+            "display_name": user.display_name or "Learner",
+            "xp": my_xp,
+        }
+    return {
+        "window_days": 7,
+        "entries": rows,
+        "my_rank": me_rank,
+        "my_xp": my_xp,
+        "me": me,
+    }
 
 
 @router.get("/gamification/badges")

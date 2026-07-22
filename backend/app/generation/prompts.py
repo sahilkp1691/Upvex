@@ -6,10 +6,14 @@ import json
 from ..models import ConceptNode, GenerationContract
 
 LEARNING_STYLE_HINTS = {
-    "visual": "Favor diagrams-in-words, tables, and spatial/structural descriptions; describe what things look like.",
-    "reading": "Favor precise prose and well-organized text; depth of written explanation over gimmicks.",
-    "hands_on": "Anchor every section in concrete code snippets or realistic scenarios the learner can trace through.",
-    "mixed": "Blend prose, examples, and structure evenly.",
+    "visual": (
+        "Prioritize section 'visual' blocks (bar, line, flow, compare, stack) that the UI renders as "
+        "charts and diagrams. Pair each visual with a short caption. Still write clear prose; do not "
+        "rely on ASCII art."
+    ),
+    "reading": "Favor precise prose and well-organized text; depth of written explanation over gimmicks. Still include one visual when a comparison or process is hard to see in words alone.",
+    "hands_on": "Anchor every section in concrete code snippets or realistic scenarios the learner can trace through. Add a visual when it clarifies scale, cost, or process flow.",
+    "mixed": "Blend prose, examples, and at least one structured visual (chart or diagram) when it builds intuition.",
 }
 
 
