@@ -1,0 +1,10 @@
+[build]
+builder = "RAILPACK"
+watchPatterns = ["frontend/**"]
+
+[deploy]
+startCommand = "node build"
+# SvelteKit serves the app at / — do not use the API /health path.
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"

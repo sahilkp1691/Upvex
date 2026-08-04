@@ -1,9 +1,16 @@
+# Deprecated for the API service — use /backend/railway.toml instead.
+#
+# Railway monorepo:
+#   API service:      Root Directory=/backend, Config File=/backend/railway.toml
+#   Frontend service: Root Directory=/frontend, Config File=/frontend/railway.toml
+#
+# If this root file is still selected as Config File with Root Directory=/backend,
+# startCommand "sh ./start.sh" correctly resolves to backend/start.sh.
 [build]
 builder = "RAILPACK"
-watchPatterns = ["backend/**", "requirements.txt", "start.sh", "railway.toml"]
+watchPatterns = ["backend/**"]
 
 [deploy]
-# Use sh explicitly so a missing +x bit cannot break boot.
 startCommand = "sh ./start.sh"
 healthcheckPath = "/health"
 healthcheckTimeout = 300

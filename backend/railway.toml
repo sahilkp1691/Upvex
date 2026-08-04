@@ -1,0 +1,12 @@
+# Railway API service settings:
+#   Root Directory: /backend
+#   Config File:    /backend/railway.toml
+[build]
+builder = "RAILPACK"
+watchPatterns = ["backend/**"]
+
+[deploy]
+startCommand = "sh ./start.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
