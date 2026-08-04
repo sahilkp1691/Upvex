@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def normalize_database_url(url: str) -> str:
     """Supabase/Railway paste often uses postgresql://; async engine needs +asyncpg."""
+    url = url.strip().strip('"').strip("'")
     if url.startswith("postgres://"):
         return "postgresql+asyncpg://" + url.removeprefix("postgres://")
     if url.startswith("postgresql://"):
@@ -30,7 +31,7 @@ class Settings(BaseSettings):
     @classmethod
     def _normalize_db_url(cls, v: object) -> object:
         if isinstance(v, str):
-            return normalize_database_url(v.strip())
+            return normalize_database_url(v)
         return v
 
     # Supabase Auth

@@ -1,6 +1,7 @@
+import asyncio
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,19 +24,22 @@ def _on_railway() -> bool:
 
 
 def _assert_runtime_config() -> None:
-    """Fail fast with a clear message when deploy env is misconfigured.
-
-    Railway does not ship backend/.env — DATABASE_URL must be set in Variables.
-    Without it we default to localhost Postgres and crash during migrations,
-    which makes /health return service unavailable.
-    """
+    """Fail fast with a clear message when deploy env is misconfigured."""
     db = settings.database_url
     local_db = "localhost" in db or "127.0.0.1" in db
+    # Direct db.<ref>.supabase.co is IPv6-only; Railway has no outbound IPv6.
+    if "db." in db and "supabase.co" in db and "pooler.supabase.com" not in db:
+        raise RuntimeError(
+            "DATABASE_URL uses the Supabase direct host (IPv6). "
+            "Railway cannot open outbound IPv6 connections. "
+            "In Supabase → Connect, copy the Session pooler URI "
+            "(host ends with pooler.supabase.com, port 5432), "
+            "use scheme postgresql+asyncpg://, and set that as DATABASE_URL."
+        )
     if _on_railway() and local_db:
         raise RuntimeError(
             "Running on Railway but DATABASE_URL points at localhost. "
-            "In Railway → Variables, set DATABASE_URL to your Supabase "
-            "session-pooler URI (postgresql+asyncpg://...@....pooler.supabase.com:5432/postgres)."
+            "Set DATABASE_URL to your Supabase session-pooler URI."
         )
     if local_db and settings.app_env == "production":
         raise RuntimeError(
@@ -44,14 +48,18 @@ def _assert_runtime_config() -> None:
         )
     if local_db:
         logger.warning(
-            "DATABASE_URL targets localhost (%s). Fine for local docker-compose; "
-            "on Railway you must set DATABASE_URL in service variables.",
+            "DATABASE_URL targets localhost (%s).",
             db.split("@")[-1] if "@" in db else db,
         )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Bind the HTTP server first so /health can pass, then migrate.
+
+    Awaiting migrations before yield kept the port closed; any slow/failed DB
+    connect made Railway report 'service unavailable' for the whole window.
+    """
     _assert_runtime_config()
     logger.info(
         "Starting %s (env=%s, db_host=%s, railway=%s)",
@@ -60,16 +68,28 @@ async def lifespan(app: FastAPI):
         settings.database_url.split("@")[-1] if "@" in settings.database_url else "(unset)",
         _on_railway(),
     )
+    app.state.db_ready = False
+
+    async def _migrate() -> None:
+        try:
+            await run_migrations()
+            app.state.db_ready = True
+            logger.info("Startup migrations complete")
+        except Exception:
+            logger.exception(
+                "Startup migrations failed — cannot reach the database. "
+                "Check DATABASE_URL (Supabase session pooler, pooler.supabase.com)."
+            )
+            os._exit(1)
+
+    migrate_task = asyncio.create_task(_migrate())
     try:
-        await run_migrations()
-    except Exception:
-        logger.exception(
-            "Startup migrations failed — cannot reach the database. "
-            "Check DATABASE_URL (Supabase session pooler, postgresql+asyncpg://)."
-        )
-        raise
-    yield
-    await engine.dispose()
+        yield
+    finally:
+        migrate_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await migrate_task
+        await engine.dispose()
 
 
 app = FastAPI(title="Upvex API", version="1.0.0", lifespan=lifespan)
@@ -87,4 +107,8 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": settings.app_name}
+    return {
+        "status": "ok",
+        "app": settings.app_name,
+        "db_ready": bool(getattr(app.state, "db_ready", False)),
+    }
