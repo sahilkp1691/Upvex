@@ -1,21 +1,28 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # Railway start command when Root Directory is set to `backend`.
 # Prefer the repo-root start.sh + railway.toml for monorepo deploys.
-set -euo pipefail
+set -eu
 
 cd "$(dirname "$0")"
 
 PORT="${PORT:-8000}"
 HOST="${HOST:-0.0.0.0}"
 
-if [[ -z "${DATABASE_URL:-}" ]]; then
-  echo "ERROR: DATABASE_URL is not set." >&2
-  echo "Add it under Railway → Variables (Supabase session pooler URI," >&2
-  echo "scheme postgresql+asyncpg://...). Without it the app defaults to" >&2
-  echo "localhost Postgres, migrations crash, and /health stays unavailable." >&2
+if [ -x /app/.venv/bin/python ]; then
+  PYTHON=/app/.venv/bin/python
+elif [ -n "${VIRTUAL_ENV:-}" ] && [ -x "${VIRTUAL_ENV}/bin/python" ]; then
+  PYTHON="${VIRTUAL_ENV}/bin/python"
+else
+  PYTHON=python
+fi
+
+echo "=== Upvex start (backend) ==="
+echo "cwd=$(pwd) host=${HOST} port=${PORT} python=${PYTHON}"
+echo "DATABASE_URL set: $([ -n "${DATABASE_URL:-}" ] && echo yes || echo NO)"
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "ERROR: DATABASE_URL is not set in the process environment." >&2
   exit 1
 fi
 
-echo "Starting uvicorn on ${HOST}:${PORT} (DATABASE_URL host: ${DATABASE_URL##*@})"
-
-exec uvicorn app.main:app --host "$HOST" --port "$PORT"
+exec "$PYTHON" -m uvicorn app.main:app --host "$HOST" --port "$PORT"

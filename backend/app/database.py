@@ -10,9 +10,10 @@ class Base(DeclarativeBase):
 
 # statement_cache_size=0 keeps asyncpg compatible with Supabase's pgbouncer
 # (transaction-mode pooling breaks prepared statements).
+# timeout avoids hanging forever on a bad DATABASE_URL (Railway healthcheck).
 connect_args = {}
 if settings.database_url.startswith("postgresql+asyncpg"):
-    connect_args = {"statement_cache_size": 0}
+    connect_args = {"statement_cache_size": 0, "timeout": 15}
 
 engine = create_async_engine(
     settings.database_url,

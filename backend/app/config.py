@@ -1,6 +1,16 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def normalize_database_url(url: str) -> str:
+    """Supabase/Railway paste often uses postgresql://; async engine needs +asyncpg."""
+    if url.startswith("postgres://"):
+        return "postgresql+asyncpg://" + url.removeprefix("postgres://")
+    if url.startswith("postgresql://"):
+        return "postgresql+asyncpg://" + url.removeprefix("postgresql://")
+    return url
 
 
 class Settings(BaseSettings):
@@ -15,6 +25,13 @@ class Settings(BaseSettings):
 
     # Database — Supabase Postgres in prod/dev-with-keys, local Postgres otherwise
     database_url: str = "postgresql+asyncpg://upvex:upvex@localhost:5432/upvex"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_db_url(cls, v: object) -> object:
+        if isinstance(v, str):
+            return normalize_database_url(v.strip())
+        return v
 
     # Supabase Auth
     supabase_url: str = ""

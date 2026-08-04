@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,21 +14,35 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("upvex")
 
 
+def _on_railway() -> bool:
+    return bool(
+        os.environ.get("RAILWAY_ENVIRONMENT")
+        or os.environ.get("RAILWAY_PROJECT_ID")
+        or os.environ.get("RAILWAY_SERVICE_ID")
+    )
+
+
 def _assert_runtime_config() -> None:
     """Fail fast with a clear message when deploy env is misconfigured.
 
-    Railway (and similar) do not ship backend/.env — DATABASE_URL must be set
-    in the service variables. Without it we default to localhost Postgres and
-    crash during migrations, which makes /health return service unavailable.
+    Railway does not ship backend/.env — DATABASE_URL must be set in Variables.
+    Without it we default to localhost Postgres and crash during migrations,
+    which makes /health return service unavailable.
     """
     db = settings.database_url
-    if "localhost" in db or "127.0.0.1" in db:
-        if settings.app_env == "production":
-            raise RuntimeError(
-                "DATABASE_URL points at localhost but APP_ENV=production. "
-                "Set DATABASE_URL in the host's environment (e.g. Railway Variables) "
-                "to your Supabase session-pooler URI (postgresql+asyncpg://...)."
-            )
+    local_db = "localhost" in db or "127.0.0.1" in db
+    if _on_railway() and local_db:
+        raise RuntimeError(
+            "Running on Railway but DATABASE_URL points at localhost. "
+            "In Railway → Variables, set DATABASE_URL to your Supabase "
+            "session-pooler URI (postgresql+asyncpg://...@....pooler.supabase.com:5432/postgres)."
+        )
+    if local_db and settings.app_env == "production":
+        raise RuntimeError(
+            "DATABASE_URL points at localhost but APP_ENV=production. "
+            "Set DATABASE_URL to your Supabase session-pooler URI."
+        )
+    if local_db:
         logger.warning(
             "DATABASE_URL targets localhost (%s). Fine for local docker-compose; "
             "on Railway you must set DATABASE_URL in service variables.",
@@ -39,10 +54,11 @@ def _assert_runtime_config() -> None:
 async def lifespan(app: FastAPI):
     _assert_runtime_config()
     logger.info(
-        "Starting %s (env=%s, db_host=%s)",
+        "Starting %s (env=%s, db_host=%s, railway=%s)",
         settings.app_name,
         settings.app_env,
         settings.database_url.split("@")[-1] if "@" in settings.database_url else "(unset)",
+        _on_railway(),
     )
     try:
         await run_migrations()

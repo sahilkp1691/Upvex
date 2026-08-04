@@ -1,4 +1,4 @@
-# Upvex
+# Upvex (Early Development)
 
 An AI-driven, gamified learning platform for tech skills — derived from "upward vector".
 Upvex diagnoses what a learner actually knows, traces weaknesses to their root cause through

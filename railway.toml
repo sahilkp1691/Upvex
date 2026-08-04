@@ -3,6 +3,8 @@ builder = "RAILPACK"
 watchPatterns = ["backend/**", "requirements.txt", "start.sh", "railway.toml"]
 
 [deploy]
-startCommand = "./start.sh"
+# Use sh explicitly so a missing +x bit cannot break boot.
+startCommand = "sh ./start.sh"
 healthcheckPath = "/health"
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
