@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Railway start command for the Upvex FastAPI backend.
-# Set Railway Root Directory to `backend` and Start Command to `./start.sh`.
+# Railway start command when Root Directory is set to `backend`.
+# Prefer the repo-root start.sh + railway.toml for monorepo deploys.
 set -euo pipefail
 
 cd "$(dirname "$0")"

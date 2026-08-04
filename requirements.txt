@@ -1,0 +1,2 @@
+# Proxy so Railpack at the monorepo root detects Python and installs backend deps.
+-r backend/requirements.txt
