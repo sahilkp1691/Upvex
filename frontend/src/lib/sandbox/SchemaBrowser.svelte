@@ -1,9 +1,10 @@
 <script>
 	import { getDatasetSchema } from './datasets.js';
 
-	let { dataset = 'employees', onInsert = () => {} } = $props();
+	let { dataset = 'employees', onInsert = () => {}, compact = false } = $props();
 
 	let expanded = $state({});
+	let open = $state(false);
 
 	let schema = $derived(getDatasetSchema(dataset));
 
@@ -20,6 +21,31 @@
 	}
 </script>
 
+{#if compact}
+	<div class="schema-strip">
+		<button class="strip-toggle" onclick={() => (open = !open)}>
+			<span class="chev" class:open>&#9656;</span>
+			<span class="schema-title">Tables you can query</span>
+			{#if schema}<span class="strip-names">{Object.keys(schema.tables).join(', ')}</span>{/if}
+		</button>
+		{#if open && schema}
+			<div class="strip-body">
+				{#each Object.entries(schema.tables) as [tname, tdef] (tname)}
+					<div class="strip-row">
+						<span class="tbl">{tname}</span>
+						<span class="strip-cols">
+							{#each tdef.columns as col (col.name)}
+								<button class="chip" onclick={() => insertRef(tname, col.name)} title="Click to insert">
+									{col.name}<span class="chip-type">{typeLabel(col.type)}</span>
+								</button>
+							{/each}
+						</span>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+{:else}
 <aside class="schema-browser">
 	<div class="schema-head">
 		<span class="schema-title">Schema</span>
@@ -55,6 +81,7 @@
 		<p class="muted">No schema loaded</p>
 	{/if}
 </aside>
+{/if}
 
 <style>
 	.schema-browser {
@@ -186,5 +213,91 @@
 	.muted {
 		color: var(--text-faint);
 		font-size: 12px;
+	}
+
+	.schema-strip {
+		background: var(--bg-elevated);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+	}
+
+	.strip-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		padding: 8px 12px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		text-align: left;
+	}
+
+	.strip-toggle .schema-title {
+		flex-shrink: 0;
+	}
+
+	.strip-names {
+		font-family: var(--mono);
+		font-size: 12px;
+		color: var(--text-dim);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.strip-body {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 0 12px 10px;
+		border-top: 1px solid var(--border);
+		padding-top: 10px;
+	}
+
+	.strip-row {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+
+	.strip-row .tbl {
+		font-family: var(--mono);
+		font-size: 12px;
+		font-weight: 650;
+		color: var(--accent-bright);
+		min-width: 96px;
+	}
+
+	.strip-cols {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
+	.chip {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 4px;
+		padding: 2px 7px;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		background: var(--bg-card);
+		color: var(--text-dim);
+		font-family: var(--mono);
+		font-size: 11.5px;
+		cursor: pointer;
+	}
+
+	.chip:hover {
+		background: var(--accent-soft);
+		color: var(--text);
+		border-color: var(--accent);
+	}
+
+	.chip-type {
+		font-size: 9.5px;
+		color: var(--text-faint);
 	}
 </style>

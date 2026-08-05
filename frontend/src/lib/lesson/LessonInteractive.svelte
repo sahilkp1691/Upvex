@@ -73,7 +73,6 @@
 			<span class="block-tag">Try it now</span>
 			{#if miniPassed}<span class="block-pass">Completed</span>{/if}
 		</div>
-		<p class="block-prompt">{interactive.prompt}</p>
 		<SqlSandbox
 			question={{
 				question_text: interactive.prompt,

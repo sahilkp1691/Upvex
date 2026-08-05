@@ -4,6 +4,8 @@ per-user variables. The contract is the global lever; user variables personalize
 import json
 
 from ..models import ConceptNode, GenerationContract
+from ..services.sandbox_problems import is_sql_topic
+from ..services.sql_sandbox import datasets_prompt_block
 
 LEARNING_STYLE_HINTS = {
     "visual": (
@@ -17,17 +19,46 @@ LEARNING_STYLE_HINTS = {
 }
 
 
+SANDBOX_SCHEMA_RULES = (
+    "Every sandbox problem runs against one of the two fixed datasets below, created "
+    "exactly as shown before the learner's query executes. These are the only tables and "
+    "columns that exist.\n"
+    "- Never invent a table, column, or data type that is not listed here.\n"
+    "- Never describe a schema inside a question prompt (no 'the table has columns "
+    "id, name, ...'). The learner already sees the real schema in the UI; a restated "
+    "schema that disagrees with it is worse than none.\n"
+    "- Refer to tables and columns by their real names, and only where they exist "
+    "(for example department is a row in `departments`, not a column on `employees`, "
+    "and there is no hire date anywhere).\n"
+    "- If the concept you are teaching cannot be practised with these columns, choose a "
+    "problem that can be. Do not bend the schema to fit the lesson.\n"
+    "- Every solution_sql must be a single SQLite SELECT (or WITH ... SELECT) that runs "
+    "successfully against these tables as written."
+)
+
+
+def sandbox_schema_prompt() -> str:
+    return f"SQL SANDBOX SCHEMA:\n{SANDBOX_SCHEMA_RULES}\n\n{datasets_prompt_block()}"
+
+
+def _build_system(contract: GenerationContract, node: ConceptNode) -> str:
+    parts = [
+        contract.persona_text,
+        f"STRUCTURE:\n{contract.structural_template}",
+        f"CONSTRAINTS:\n{contract.constraints_text}",
+    ]
+    if is_sql_topic(node.topic_id):
+        parts.append(sandbox_schema_prompt())
+    return "\n\n".join(parts)
+
+
 def build_lesson_prompt(
     contract: GenerationContract,
     node: ConceptNode,
     user_vars: dict,
 ) -> tuple[str, str]:
     """Returns (system_prompt, user_prompt) for the lesson generation call."""
-    system = (
-        f"{contract.persona_text}\n\n"
-        f"STRUCTURE:\n{contract.structural_template}\n\n"
-        f"CONSTRAINTS:\n{contract.constraints_text}"
-    )
+    system = _build_system(contract, node)
     style = user_vars.get("learning_style", "mixed")
     payload = {
         "task": "Generate the LESSON only (JSON object matching the LESSON SHAPE).",
@@ -57,11 +88,7 @@ def build_quiz_prompt(
     lesson_body: dict,
 ) -> tuple[str, str]:
     """Returns (system_prompt, user_prompt) for the quiz generation call."""
-    system = (
-        f"{contract.persona_text}\n\n"
-        f"STRUCTURE:\n{contract.structural_template}\n\n"
-        f"CONSTRAINTS:\n{contract.constraints_text}"
-    )
+    system = _build_system(contract, node)
     lesson_summary = {
         "title": lesson_body.get("title"),
         "section_headings": [s.get("heading") for s in lesson_body.get("sections", [])],

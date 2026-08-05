@@ -111,6 +111,28 @@ async def _seed_badges_v2(session: AsyncSession) -> None:
             session.add(Badge(**b))
 
 
+async def _seed_contract_v4(session: AsyncSession) -> None:
+    """Activate GenerationContract v4 (fixed SQL sandbox schema, no invented tables).
+
+    Bumping the active version also invalidates cached GeneratedContent, since lookups
+    are keyed by contract version — lessons carrying an invented schema get regenerated.
+    """
+    existing = (
+        await session.execute(
+            select(GenerationContract).where(GenerationContract.version == 4)
+        )
+    ).scalar_one_or_none()
+    for row in (await session.execute(select(GenerationContract))).scalars().all():
+        row.is_active = False
+    if existing:
+        existing.persona_text = seed_data.GENERATION_CONTRACT_V4["persona_text"]
+        existing.structural_template = seed_data.GENERATION_CONTRACT_V4["structural_template"]
+        existing.constraints_text = seed_data.GENERATION_CONTRACT_V4["constraints_text"]
+        existing.is_active = True
+    else:
+        session.add(GenerationContract(**seed_data.GENERATION_CONTRACT_V4, is_active=True))
+
+
 async def _add_user_email_verified(session: AsyncSession) -> None:
     """Add users.email_verified / email_verified_at to pre-existing databases.
 
@@ -137,6 +159,7 @@ MIGRATION_STEPS = [
     ("0006_seed_badges_v2", _seed_badges_v2),
     ("0007_seed_generation_contract_v2", _seed_contract_v2),
     ("0008_seed_generation_contract_v3", _seed_contract_v3),
+    ("0009_seed_generation_contract_v4", _seed_contract_v4),
 ]
 
 

@@ -152,6 +152,65 @@ def dataset_for_client(name: str) -> dict | None:
     return {"name": name, "label": ds["label"], "description": ds["description"], "tables": tables}
 
 
+def _sql_literal(value: Any) -> str:
+    if value is None:
+        return "NULL"
+    if isinstance(value, str):
+        return "'" + value.replace("'", "''") + "'"
+    return str(value)
+
+
+def dataset_ddl(name: str) -> str:
+    """The exact CREATE TABLE statements the sandbox executes for this dataset."""
+    ds = SQL_DATASETS.get(name)
+    if not ds:
+        return ""
+    stmts = []
+    for tname, tdef in ds["tables"].items():
+        cols = ",\n".join(
+            f"  {c['name']} {c['type']}" + (" PRIMARY KEY" if c.get("pk") else "")
+            for c in tdef["columns"]
+        )
+        stmts.append(f"CREATE TABLE {tname} (\n{cols}\n);")
+    return "\n".join(stmts)
+
+
+def datasets_prompt_block(sample_rows: int = 3) -> str:
+    """Full sandbox schema rendered for content-generation prompts.
+
+    Generated problems run against these exact tables, so the model has to see the
+    real DDL — without it, it invents plausible columns the learner can never query.
+    """
+    blocks = []
+    for name, ds in SQL_DATASETS.items():
+        samples = []
+        for tname, tdef in ds["tables"].items():
+            rows = "; ".join(
+                "(" + ", ".join(_sql_literal(v) for v in row) + ")"
+                for row in tdef["rows"][:sample_rows]
+            )
+            samples.append(f"  {tname} ({len(tdef['rows'])} rows): {rows}")
+        blocks.append(
+            f"DATASET '{name}' — {ds['description']}\n"
+            f"{dataset_ddl(name)}\n"
+            "Sample rows:\n" + "\n".join(samples)
+        )
+    return "\n\n".join(blocks)
+
+
+def solution_sql_error(dataset_name: str, sql: str) -> str | None:
+    """Return why this SQL can't serve as a sandbox solution, or None if it runs."""
+    if dataset_name not in SQL_DATASETS:
+        return f"Unknown dataset: {dataset_name}"
+    if not isinstance(sql, str) or not sql.strip():
+        return "Solution SQL is empty"
+    try:
+        execute_query(dataset_name, sql)
+    except Exception as exc:  # noqa: BLE001 — any failure disqualifies the problem
+        return str(exc)
+    return None
+
+
 def _create_connection(dataset_name: str) -> sqlite3.Connection:
     ds = SQL_DATASETS.get(dataset_name)
     if not ds:

@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from ..config import settings
 from ..generation import openrouter, prompts
 from ..models import ConceptNode, GeneratedContent, GenerationContract
-from ..services.sandbox_problems import is_sql_topic, problem_for_concept
+from ..services.sandbox_problems import fallback_problem, is_sql_topic, problem_for_concept
+from ..services.sql_sandbox import solution_sql_error
 from .celery_app import celery_app
 
 logger = logging.getLogger("upvex.generate")
@@ -131,7 +132,7 @@ def _sanitize_visual(visual: object) -> dict | None:
     return None
 
 
-def _validate_lesson(lesson: dict) -> None:
+def _validate_lesson(lesson: dict, node: ConceptNode | None = None) -> None:
     for key in ("title", "intro", "sections", "key_takeaways", "check_understanding"):
         if key not in lesson:
             raise ValueError(f"Lesson missing required key: {key}")
@@ -147,14 +148,25 @@ def _validate_lesson(lesson: dict) -> None:
             else:
                 section.pop("visual", None)
         if "interactive" in section:
-            cleaned = _sanitize_interactive(section.get("interactive"))
+            cleaned = _sanitize_interactive(section.get("interactive"), node)
             if cleaned:
                 section["interactive"] = cleaned
             else:
                 section.pop("interactive", None)
 
 
-def _sanitize_interactive(interactive: object) -> dict | None:
+def _mini_sandbox_from_problem(problem: dict) -> dict:
+    return {
+        "type": "mini_sandbox",
+        "prompt": problem["question_text"],
+        "dataset": problem["dataset"],
+        "starter_sql": problem["starter_sql"],
+        "solution_sql": problem["solution_sql"],
+        "hints": problem.get("hints", [])[:3],
+    }
+
+
+def _sanitize_interactive(interactive: object, node: ConceptNode | None = None) -> dict | None:
     if not isinstance(interactive, dict):
         return None
     itype = interactive.get("type")
@@ -165,12 +177,26 @@ def _sanitize_interactive(interactive: object) -> dict | None:
         hints = interactive.get("hints")
         if not isinstance(hints, list):
             hints = []
+        dataset = interactive["dataset"].strip()
+        solution = interactive["solution_sql"].strip()
+        # A solution that doesn't run means the model wrote against a schema that
+        # doesn't exist, so the prompt the learner reads is wrong too — swap the
+        # whole problem rather than shipping an unanswerable one.
+        err = solution_sql_error(dataset, solution)
+        if err:
+            logger.warning(
+                "Discarding mini_sandbox for concept %s — solution SQL failed: %s",
+                getattr(node, "id", "?"), err,
+            )
+            return _mini_sandbox_from_problem(
+                fallback_problem(getattr(node, "id", None), dataset)
+            )
         return {
             "type": "mini_sandbox",
             "prompt": interactive["prompt"].strip(),
-            "dataset": interactive["dataset"].strip(),
+            "dataset": dataset,
             "starter_sql": interactive["starter_sql"],
-            "solution_sql": interactive["solution_sql"].strip(),
+            "solution_sql": solution,
             "hints": [str(h).strip() for h in hints[:3] if str(h).strip()],
         }
     if itype == "step_reorder":
@@ -366,7 +392,7 @@ def _stub_lesson(node: ConceptNode) -> dict:
     }
 
 
-def _validate_quiz(quiz: dict) -> None:
+def _validate_quiz(quiz: dict, node: ConceptNode | None = None) -> None:
     questions = quiz.get("questions")
     if not isinstance(questions, list) or len(questions) < 3:
         raise ValueError("Quiz must contain at least 3 questions")
@@ -387,6 +413,29 @@ def _validate_quiz(quiz: dict) -> None:
                     raise ValueError(f"sandbox_sql question missing {key}")
             if not isinstance(q.get("hints"), list):
                 q["hints"] = []
+            err = solution_sql_error(q["dataset"], q["solution_sql"])
+            if err:
+                logger.warning(
+                    "Replacing sandbox_sql for concept %s — solution SQL failed: %s",
+                    getattr(node, "id", "?"), err,
+                )
+                q.update(_sandbox_question_from_problem(
+                    fallback_problem(getattr(node, "id", None), q["dataset"])
+                ))
+
+
+def _sandbox_question_from_problem(problem: dict) -> dict:
+    return {
+        "type": "sandbox_sql",
+        "question_text": problem["question_text"],
+        "dataset": problem["dataset"],
+        "starter_sql": problem["starter_sql"],
+        "solution_sql": problem["solution_sql"],
+        "hints": problem.get("hints", []),
+        "order_sensitive": problem.get("order_sensitive", False),
+        "difficulty": problem.get("difficulty", 4),
+        "explanation": problem.get("explanation", ""),
+    }
 
 
 def _stub_quiz(node: ConceptNode) -> dict:
@@ -506,13 +555,13 @@ async def _run_generation(content_id: str) -> None:
                     lesson = await openrouter.chat_json(
                         settings.model_lesson_generation, sys_p, usr_p, temperature=0.7
                     )
-                    _validate_lesson(lesson)
+                    _validate_lesson(lesson, node)
 
                     sys_q, usr_q = prompts.build_quiz_prompt(contract, node, user_vars, lesson)
                     quiz = await openrouter.chat_json(
                         settings.model_quiz_generation, sys_q, usr_q, temperature=0.4
                     )
-                    _validate_quiz(quiz)
+                    _validate_quiz(quiz, node)
                     model_used = f"{settings.model_lesson_generation} + {settings.model_quiz_generation}"
                 else:
                     lesson, quiz = _stub_lesson(node), _stub_quiz(node)

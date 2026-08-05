@@ -212,6 +212,10 @@
 				<p class="problem-text">{q.question_text}</p>
 			</div>
 
+			{#if compact}
+				<SchemaBrowser dataset={q.dataset} onInsert={insertFromSchema} compact={true} />
+			{/if}
+
 			<div class="toolbar">
 				{#if allowSurprise && !compact}
 					<button class="tb surprise" onclick={surpriseMe}>Surprise me</button>

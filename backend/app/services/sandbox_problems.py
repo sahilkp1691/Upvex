@@ -319,5 +319,25 @@ def problem_for_concept(concept_id: str) -> dict | None:
     return SQL_SANDBOX_PROBLEMS.get(concept_id)
 
 
+def fallback_problem(concept_id: str | None = None, dataset: str | None = None) -> dict:
+    """A curated problem to swap in when a generated one doesn't run.
+
+    Prefers the concept's own problem, then any problem on the same dataset, so the
+    learner still gets something relevant rather than a broken challenge.
+    """
+    if concept_id:
+        own = SQL_SANDBOX_PROBLEMS.get(concept_id)
+        if own and (dataset is None or own["dataset"] == dataset):
+            return own
+    if dataset:
+        for problem in SQL_SANDBOX_PROBLEMS.values():
+            if problem["dataset"] == dataset:
+                return problem
+        for variant in SQL_SURPRISE_VARIANTS:
+            if variant["dataset"] == dataset:
+                return variant
+    return SQL_SANDBOX_PROBLEMS["sql_select_basics"]
+
+
 def is_sql_topic(topic_id: str) -> bool:
     return topic_id == "topic_sql"

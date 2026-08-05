@@ -669,6 +669,28 @@ GENERATION_CONTRACT_V3 = {
     ),
 }
 
+# v4 keeps v3's shapes but hard-bans invented SQL schemas — the sandbox datasets are
+# fixed, and the real DDL is appended to the system prompt at generation time.
+GENERATION_CONTRACT_V4 = {
+    "version": 4,
+    "persona_text": GENERATION_CONTRACT_V3["persona_text"],
+    "structural_template": (
+        GENERATION_CONTRACT_V3["structural_template"]
+        + " For sandbox problems ('mini_sandbox' and 'sandbox_sql'), the 'prompt'/'question_text' "
+        "states the task and the expected output columns only — it must never describe, list, or "
+        "redefine the table schema, because the learner is shown the real schema alongside the editor."
+    ),
+    "constraints_text": (
+        "Stay strictly on the stated learning objective of this concept node. Do not wander into adjacent "
+        "concepts beyond one-sentence pointers. If a technical specific is uncertain or version-dependent, "
+        "say so rather than asserting it confidently. Target 5-10 minutes of reading. "
+        "Sandbox problems run against the fixed datasets given in the SQL SANDBOX SCHEMA section: use only "
+        "those tables and columns, never invent or restate a schema, and make sure every solution_sql is a "
+        "single SQLite SELECT that runs successfully as written. Output MUST be valid JSON matching the "
+        "defined schema exactly — no markdown fences, no commentary outside the JSON."
+    ),
+}
+
 BADGES = [
     {"id": "badge_first_lesson", "name": "Liftoff", "description": "Complete your first lesson.",
      "criteria": {"type": "first_lesson"}},
