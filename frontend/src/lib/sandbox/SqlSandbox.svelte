@@ -1,4 +1,5 @@
 <script>
+	import { untrack } from 'svelte';
 	import SqlEditor from './SqlEditor.svelte';
 	import SchemaBrowser from './SchemaBrowser.svelte';
 	import QueryResults from './QueryResults.svelte';
@@ -21,9 +22,17 @@
 	let activeQuestion = $state(null);
 	let usingSurprise = $state(false);
 
+	// Keyed on a primitive so the derived acts as a memo barrier: re-running this
+	// on every parent render handed a fresh activeQuestion object downstream, which
+	// fed back through onStateChange into an infinite effect loop.
+	let questionKey = $derived(`${question?.question_text ?? ''}|${question?.dataset ?? ''}`);
+
 	$effect(() => {
-		activeQuestion = { ...question };
-		usingSurprise = false;
+		questionKey;
+		untrack(() => {
+			activeQuestion = { ...question };
+			usingSurprise = false;
+		});
 	});
 
 	let q = $derived(activeQuestion || question);
@@ -61,12 +70,15 @@
 	});
 
 	$effect(() => {
-		onStateChange({
+		const snapshot = {
 			user_sql: sql,
 			passed,
 			hints_used: hintsRevealed,
 			check_attempts: checkAttempts
-		});
+		};
+		// The callback writes parent state; keep it untracked so its identity (and
+		// anything it touches) can't re-trigger this effect.
+		untrack(() => onStateChange(snapshot));
 	});
 
 	async function handleRun() {
