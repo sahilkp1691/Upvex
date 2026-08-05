@@ -24,6 +24,7 @@ from ..config import settings
 from ..services import xp as xp_service
 from ..services.scoring import keyword_overlap_score
 from ..services.signature import compute_signature
+from ..services.sql_sandbox import dataset_for_client, verify_sandbox_answer
 from ..tasks.generate import _run_generation, generate_content
 
 router = APIRouter()
@@ -35,6 +36,18 @@ class QuizAnswer(BaseModel):
     question_index: int
     selected_option: int | None = None
     answer_text: str | None = None
+    user_sql: str | None = None
+    hints_used: int = 0
+    check_attempts: int = 0
+
+
+class SandboxVerifyRequest(BaseModel):
+    generated_content_id: str | None = None
+    question_index: int | None = None
+    dataset: str | None = None
+    user_sql: str
+    solution_sql: str | None = None
+    order_sensitive: bool = False
 
 
 class QuizSubmission(BaseModel):
@@ -60,13 +73,37 @@ async def _load_context(db: AsyncSession, goal_id: str, concept_id: str, user: U
 def _quiz_for_client(quiz_body: dict) -> dict:
     """Strip answers before sending the quiz to the client."""
     questions = []
+    datasets_used: set[str] = set()
     for q in quiz_body.get("questions", []):
-        questions.append({
-            "type": q.get("type"),
-            "question_text": q.get("question_text"),
-            "options": q.get("options"),
-        })
-    return {"questions": questions}
+        qtype = q.get("type")
+        if qtype == "sandbox_sql":
+            datasets_used.add(q.get("dataset", ""))
+            questions.append({
+                "type": "sandbox_sql",
+                "question_text": q.get("question_text"),
+                "dataset": q.get("dataset"),
+                "starter_sql": q.get("starter_sql"),
+                "hints": q.get("hints") or [],
+                "order_sensitive": q.get("order_sensitive", False),
+                "difficulty": q.get("difficulty", 4),
+            })
+        else:
+            questions.append({
+                "type": qtype,
+                "question_text": q.get("question_text"),
+                "options": q.get("options"),
+            })
+    datasets = {}
+    for name in datasets_used:
+        if name:
+            ds = dataset_for_client(name)
+            if ds:
+                datasets[name] = ds
+    return {
+        "mode": quiz_body.get("mode", "classic"),
+        "questions": questions,
+        "datasets": datasets,
+    }
 
 
 def _content_payload(content: GeneratedContent, *, visit_count: int = 0, completion_count: int = 0, last_visited_at=None) -> dict:
@@ -203,6 +240,56 @@ async def poll_content(content_id: str, user: User = Depends(get_current_user), 
     return _content_payload(content)
 
 
+@router.post("/content/verify-sandbox")
+async def verify_sandbox(
+    payload: SandboxVerifyRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Live Check for sandbox SQL — re-verifies on the server."""
+    _ = user
+    solution_sql = payload.solution_sql
+    dataset = payload.dataset
+    order_sensitive = payload.order_sensitive
+
+    if payload.generated_content_id is not None and payload.question_index is not None:
+        content = await db.get(GeneratedContent, payload.generated_content_id)
+        if content is None or not content.quiz_body:
+            raise HTTPException(404, "Content not found")
+        questions = content.quiz_body.get("questions", [])
+        if not (0 <= payload.question_index < len(questions)):
+            raise HTTPException(422, "Invalid question index")
+        q = questions[payload.question_index]
+        if q.get("type") != "sandbox_sql":
+            raise HTTPException(422, "Not a sandbox question")
+        solution_sql = q.get("solution_sql")
+        dataset = q.get("dataset")
+        order_sensitive = q.get("order_sensitive", False)
+
+    if not solution_sql or not dataset:
+        raise HTTPException(422, "Missing dataset or solution")
+
+    result = verify_sandbox_answer(
+        dataset,
+        payload.user_sql,
+        solution_sql,
+        order_sensitive=order_sensitive,
+    )
+    return {
+        "passed": result.get("passed", False),
+        "column_match": result.get("column_match", False),
+        "row_count_match": result.get("row_count_match", False),
+        "expected_row_count": result.get("expected_row_count"),
+        "actual_row_count": result.get("actual_row_count"),
+        "expected_columns": result.get("expected_columns"),
+        "actual_columns": result.get("actual_columns"),
+        "issues": result.get("issues", []),
+        "error": result.get("error"),
+        "expected": result.get("expected"),
+        "actual": result.get("actual"),
+    }
+
+
 @router.post("/content/{goal_id}/{concept_id}/submit-quiz")
 async def submit_quiz(
     goal_id: str,
@@ -218,22 +305,56 @@ async def submit_quiz(
 
     questions = content.quiz_body.get("questions", [])
     difficulty = _DIFFICULTY_TO_QUIZ.get(node.difficulty_tag, "medium")
+    quiz_mode = content.quiz_body.get("mode", "classic")
 
     responses: list[dict] = []
     review: list[dict] = []
+    sandbox_scores: list[float] = []
+    mcq_scores: list[float] = []
+
     for ans in payload.answers:
         if not (0 <= ans.question_index < len(questions)):
             continue
         q = questions[ans.question_index]
+        qtype = q.get("type")
         record: dict = {
             "question_id": f"{content.id}:{ans.question_index}",
             "concept_node_id": concept_id,
             "difficulty": difficulty,
-            "type": q.get("type"),
+            "type": qtype,
             "question_text": q.get("question_text"),
         }
-        if q.get("type") == "multiple_choice":
+        if qtype == "sandbox_sql":
+            user_sql = (ans.user_sql or "").strip()
+            verification = verify_sandbox_answer(
+                q.get("dataset", ""),
+                user_sql,
+                q.get("solution_sql", ""),
+                order_sensitive=q.get("order_sensitive", False),
+            )
+            passed = verification.get("passed", False)
+            col_match = verification.get("column_match", False)
+            if passed:
+                score = 1.0
+            elif col_match:
+                score = 0.5
+            else:
+                score = 0.0
+            sandbox_scores.append(score)
+            record["user_sql"] = user_sql
+            record["correct"] = passed
+            record["score"] = score
+            review.append({
+                "question_index": ans.question_index,
+                "correct": passed,
+                "score": score,
+                "explanation": q.get("explanation"),
+                "issues": verification.get("issues", []),
+                "user_sql": user_sql,
+            })
+        elif qtype == "multiple_choice":
             correct = ans.selected_option == q.get("correct_option")
+            mcq_scores.append(1.0 if correct else 0.0)
             record["selected_option"] = ans.selected_option
             record["correct"] = correct
             review.append({
@@ -245,16 +366,29 @@ async def submit_quiz(
         else:
             record["answer_text"] = ans.answer_text or ""
             record["expected_concepts"] = q.get("expected_concepts") or []
-            record["correct"] = keyword_overlap_score(record["answer_text"], record["expected_concepts"]) >= 0.5
+            correct = keyword_overlap_score(record["answer_text"], record["expected_concepts"]) >= 0.5
+            mcq_scores.append(1.0 if correct else 0.0)
             review.append({
                 "question_index": ans.question_index,
-                "correct": record["correct"],
+                "correct": correct,
                 "explanation": q.get("explanation"),
             })
         responses.append(record)
 
     if not responses:
         raise HTTPException(422, "No valid answers submitted")
+
+    # Weighted quiz score: sandbox 50%, MCQ split remaining in mixed mode
+    if quiz_mode in ("sandbox", "mixed") and sandbox_scores:
+        sandbox_avg = sum(sandbox_scores) / len(sandbox_scores)
+        if mcq_scores:
+            mcq_avg = sum(mcq_scores) / len(mcq_scores)
+            raw_quiz_score = sandbox_avg * 50 + mcq_avg * 50
+        else:
+            raw_quiz_score = sandbox_avg * 100
+    else:
+        all_scores = sandbox_scores + mcq_scores
+        raw_quiz_score = (sum(all_scores) / len(all_scores) * 100) if all_scores else 0.0
 
     # Evaluator light re-scoring pass: blends new evidence into the gap map and
     # re-runs graph traversal to check whether root gaps are resolved.
@@ -270,7 +404,8 @@ async def submit_quiz(
         prior_gap_map=dict(goal.concept_gap_map or {}),
     )
 
-    quiz_score = output["concept_scores"].get(concept_id, 0.0)
+    raw_quiz_score = round(raw_quiz_score, 1)
+    quiz_score = raw_quiz_score
     new_score = output["concept_scores"].get(concept_id)
     delta = (new_score - prior_score) if (prior_score is not None and new_score is not None) else (new_score or 0.0)
 
@@ -318,6 +453,8 @@ async def submit_quiz(
 
     return {
         "quiz_score": quiz_score,
+        "raw_quiz_score": round(raw_quiz_score, 1),
+        "quiz_mode": quiz_mode,
         "concept_score_delta": round(delta, 1),
         "review": review,
         "xp_earned": earned_xp,

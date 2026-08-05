@@ -4,6 +4,8 @@
 	import { get, post } from '$lib/api.js';
 	import { renderMarkdown } from '$lib/markdown.js';
 	import LessonVisual from '$lib/LessonVisual.svelte';
+	import LessonInteractive from '$lib/lesson/LessonInteractive.svelte';
+	import SqlSandbox from '$lib/sandbox/SqlSandbox.svelte';
 	import { pushToast, gamification, refreshGamification } from '$lib/stores.js';
 	import { get as getStore } from 'svelte/store';
 
@@ -28,8 +30,18 @@
 
 	// quiz state
 	let answers = $state([]);
+	let sandboxStates = $state({});
 	let quizResult = $state(null);
 	let submittingQuiz = $state(false);
+	let sandboxPassed = $state({});
+
+	let isSandboxQuiz = $derived(
+		content?.quiz?.mode === 'sandbox' || content?.quiz?.mode === 'mixed'
+	);
+
+	let hasSandboxQuestion = $derived(
+		content?.quiz?.questions?.some((q) => q.type === 'sandbox_sql') ?? false
+	);
 
 	$effect(() => {
 		load();
@@ -62,7 +74,14 @@
 			last_visited_at: res.last_visited_at ?? prevLast ?? null
 		};
 		if (res.status === 'ready') {
-			answers = res.quiz.questions.map(() => ({ selected_option: null, answer_text: '' }));
+			answers = res.quiz.questions.map((q) => {
+				if (q.type === 'sandbox_sql') {
+					return { user_sql: q.starter_sql || '', hints_used: 0, check_attempts: 0, passed: false };
+				}
+				return { selected_option: null, answer_text: '' };
+			});
+			sandboxStates = {};
+			sandboxPassed = {};
 			phase = 'lesson';
 		} else if (res.status === 'failed') {
 			error = res.error || 'Generation failed';
@@ -95,11 +114,24 @@
 		content?.quiz &&
 			answers.every((a, i) => {
 				const q = content.quiz.questions[i];
+				if (q.type === 'sandbox_sql') {
+					return a.passed || (a.user_sql || '').trim().length > 0;
+				}
 				return q.type === 'multiple_choice'
 					? a.selected_option !== null
 					: a.answer_text.trim().length > 0;
 			})
 	);
+
+	function onSandboxStateChange(i, state) {
+		answers[i] = { ...answers[i], ...state };
+		sandboxStates[i] = state;
+	}
+
+	function onSandboxPassed(i) {
+		sandboxPassed[i] = true;
+		answers[i] = { ...answers[i], passed: true };
+	}
 
 	async function submitQuiz() {
 		submittingQuiz = true;
@@ -109,11 +141,22 @@
 		try {
 			quizResult = await post(`/content/${goalId}/${conceptId}/submit-quiz`, {
 				generated_content_id: content.content_id,
-				answers: answers.map((a, i) => ({
-					question_index: i,
-					selected_option: a.selected_option,
-					answer_text: a.answer_text || null
-				}))
+				answers: answers.map((a, i) => {
+					const q = content.quiz.questions[i];
+					if (q.type === 'sandbox_sql') {
+						return {
+							question_index: i,
+							user_sql: a.user_sql || '',
+							hints_used: a.hints_used || 0,
+							check_attempts: a.check_attempts || 0
+						};
+					}
+					return {
+						question_index: i,
+						selected_option: a.selected_option,
+						answer_text: a.answer_text || null
+					};
+				})
 			});
 			phase = 'done';
 			if (previousLevel != null && quizResult.level > previousLevel) {
@@ -150,7 +193,7 @@
 
 <svelte:head><title>Lesson — Upvex</title></svelte:head>
 
-<div class="page lesson-page">
+<div class="page lesson-page" class:sandbox-mode={phase === 'quiz' && hasSandboxQuestion}>
 	{#if phase === 'loading'}
 		<p class="faint center">Loading...</p>
 	{:else if phase === 'generating'}
@@ -204,6 +247,9 @@
 					{#if section.code_example}
 						<pre><code>{section.code_example.code}</code></pre>
 					{/if}
+					{#if section.interactive}
+						<LessonInteractive interactive={section.interactive} />
+					{/if}
 				</section>
 			{/each}
 
@@ -226,33 +272,57 @@
 			</button>
 		</article>
 	{:else if phase === 'quiz' && content?.quiz}
-		<div class="quiz">
-			<h1>Quick check</h1>
-			<p class="muted">Your answers update your knowledge map — honest attempts beat guesses.</p>
-			{#each content.quiz.questions as q, i (i)}
-				<div class="card q-block">
-					<p class="q-text"><strong>{i + 1}.</strong> {q.question_text}</p>
-					{#if q.type === 'multiple_choice'}
-						<div class="options">
-							{#each q.options as opt, oi (oi)}
-								<button
-									class="option"
-									class:selected={answers[i].selected_option === oi}
-									onclick={() => (answers[i].selected_option = oi)}
-								>
-									{opt}
-								</button>
-							{/each}
-						</div>
-					{:else}
-						<textarea
-							class="input"
-							rows="3"
-							placeholder="A sentence or two..."
-							bind:value={answers[i].answer_text}
-						></textarea>
-					{/if}
+		<div class="quiz" class:sandbox-quiz={hasSandboxQuestion}>
+			{#if hasSandboxQuestion}
+				<div class="quiz-header">
+					<div>
+						<h1>SQL Practice Lab</h1>
+						<p class="muted">Write real queries against a live database. Run, check, then submit.</p>
+					</div>
+					<a href={`/roadmap/${goalId}`} class="back-inline">Back to roadmap</a>
 				</div>
+			{:else}
+				<h1>Quick check</h1>
+				<p class="muted">Your answers update your knowledge map — honest attempts beat guesses.</p>
+			{/if}
+
+			{#each content.quiz.questions as q, i (i)}
+				{#if q.type === 'sandbox_sql'}
+					<div class="sandbox-wrap">
+						<SqlSandbox
+							question={q}
+							contentId={content.content_id}
+							questionIndex={i}
+							allowSurprise={true}
+							onStateChange={(state) => onSandboxStateChange(i, state)}
+							onPassed={() => onSandboxPassed(i)}
+						/>
+					</div>
+				{:else}
+					<div class="card q-block">
+						<p class="q-text"><strong>{i + 1}.</strong> {q.question_text}</p>
+						{#if q.type === 'multiple_choice'}
+							<div class="options">
+								{#each q.options as opt, oi (oi)}
+									<button
+										class="option"
+										class:selected={answers[i].selected_option === oi}
+										onclick={() => (answers[i].selected_option = oi)}
+									>
+										{opt}
+									</button>
+								{/each}
+							</div>
+						{:else}
+							<textarea
+								class="input"
+								rows="3"
+								placeholder="A sentence or two..."
+								bind:value={answers[i].answer_text}
+							></textarea>
+						{/if}
+					</div>
+				{/if}
 			{/each}
 			<button
 				class="btn btn-primary big"
@@ -311,10 +381,18 @@
 				<h3>Answer review</h3>
 				{#each quizResult.review as r (r.question_index)}
 					{@const q = content.quiz.questions[r.question_index]}
-					<div class="review-row">
+					<div class="review-row" class:sandbox-review={q?.type === 'sandbox_sql'}>
 						<span class="mark" class:good={r.correct}>{r.correct ? 'Correct' : 'Missed'}</span>
 						<div>
 							<p class="rq">{q.question_text}</p>
+							{#if r.user_sql}
+								<pre class="sql-review"><code>{r.user_sql}</code></pre>
+							{/if}
+							{#if r.issues?.length && !r.correct}
+								{#each r.issues as issue, ii (ii)}
+									<p class="muted rexp">{issue}</p>
+								{/each}
+							{/if}
 							{#if r.explanation}<p class="muted rexp">{r.explanation}</p>{/if}
 						</div>
 					</div>
@@ -338,6 +416,10 @@
 <style>
 	.lesson-page {
 		max-width: 760px;
+	}
+
+	.lesson-page.sandbox-mode {
+		max-width: 1200px;
 	}
 
 	.center {
@@ -653,5 +735,44 @@
 	.rexp {
 		font-size: 13.5px;
 		margin: 0;
+	}
+
+	.quiz-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		gap: 16px;
+		margin-bottom: 8px;
+	}
+
+	.back-inline {
+		font-size: 13px;
+		color: var(--text-dim);
+		white-space: nowrap;
+	}
+
+	.sandbox-wrap {
+		margin-bottom: 20px;
+	}
+
+	.sandbox-quiz .big {
+		margin-top: 8px;
+	}
+
+	.sql-review {
+		margin: 8px 0;
+		padding: 10px 12px;
+		background: var(--pre-bg);
+		border-radius: var(--radius-sm);
+		font-size: 12px;
+		overflow-x: auto;
+	}
+
+	.sandbox-review {
+		grid-template-columns: 74px 1fr;
+	}
+
+	.sandbox-review .sql-review code {
+		font-family: var(--mono);
 	}
 </style>

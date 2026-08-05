@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from ..config import settings
 from ..generation import openrouter, prompts
 from ..models import ConceptNode, GeneratedContent, GenerationContract
+from ..services.sandbox_problems import is_sql_topic, problem_for_concept
 from .celery_app import celery_app
 
 logger = logging.getLogger("upvex.generate")
@@ -145,6 +146,62 @@ def _validate_lesson(lesson: dict) -> None:
                 section["visual"] = cleaned
             else:
                 section.pop("visual", None)
+        if "interactive" in section:
+            cleaned = _sanitize_interactive(section.get("interactive"))
+            if cleaned:
+                section["interactive"] = cleaned
+            else:
+                section.pop("interactive", None)
+
+
+def _sanitize_interactive(interactive: object) -> dict | None:
+    if not isinstance(interactive, dict):
+        return None
+    itype = interactive.get("type")
+    if itype == "mini_sandbox":
+        required = ("prompt", "dataset", "starter_sql", "solution_sql")
+        if not all(isinstance(interactive.get(k), str) for k in required):
+            return None
+        hints = interactive.get("hints")
+        if not isinstance(hints, list):
+            hints = []
+        return {
+            "type": "mini_sandbox",
+            "prompt": interactive["prompt"].strip(),
+            "dataset": interactive["dataset"].strip(),
+            "starter_sql": interactive["starter_sql"],
+            "solution_sql": interactive["solution_sql"].strip(),
+            "hints": [str(h).strip() for h in hints[:3] if str(h).strip()],
+        }
+    if itype == "step_reorder":
+        steps = interactive.get("steps")
+        order = interactive.get("correct_order")
+        if not isinstance(steps, list) or not isinstance(order, list):
+            return None
+        if len(steps) < 2 or len(order) != len(steps):
+            return None
+        return {
+            "type": "step_reorder",
+            "prompt": str(interactive.get("prompt", "")).strip(),
+            "steps": [str(s).strip() for s in steps],
+            "correct_order": [int(i) for i in order],
+        }
+    if itype == "concept_match":
+        pairs = interactive.get("pairs")
+        if not isinstance(pairs, list) or len(pairs) < 2:
+            return None
+        cleaned = []
+        for p in pairs:
+            if isinstance(p, dict) and p.get("left") and p.get("right"):
+                cleaned.append({"left": str(p["left"]).strip(), "right": str(p["right"]).strip()})
+        if len(cleaned) < 2:
+            return None
+        return {
+            "type": "concept_match",
+            "prompt": str(interactive.get("prompt", "")).strip(),
+            "pairs": cleaned,
+        }
+    return None
 
 
 def _stub_visual_for(node: ConceptNode) -> dict:
@@ -249,27 +306,57 @@ def _stub_visual_for(node: ConceptNode) -> dict:
 
 
 def _stub_lesson(node: ConceptNode) -> dict:
+    sections = [
+        {
+            "heading": "Learning objective",
+            "body": node.learning_objective,
+            "visual": _stub_visual_for(node),
+        },
+        {
+            "heading": "About this placeholder",
+            "body": (
+                "Upvex generates lessons live via OpenRouter using the active GenerationContract "
+                "and your learner profile. Since no API key is configured, this stub is served so "
+                "the full product flow can be exercised in development — including lesson visuals "
+                "and interactive blocks."
+            ),
+        },
+    ]
+    if is_sql_topic(node.topic_id):
+        problem = problem_for_concept(node.id)
+        if problem:
+            sections.insert(1, {
+                "heading": "Try it now",
+                "body": (
+                    "Practice the concept in a live SQL sandbox. Write a query, run it, "
+                    "and check your answer before moving to the quiz."
+                ),
+                "interactive": {
+                    "type": "mini_sandbox",
+                    "prompt": problem["question_text"],
+                    "dataset": problem["dataset"],
+                    "starter_sql": problem["starter_sql"],
+                    "solution_sql": problem["solution_sql"],
+                    "hints": problem.get("hints", [])[:2],
+                },
+            })
+        sections.append({
+            "heading": "SQL execution order",
+            "body": "Understanding clause order helps you debug queries.",
+            "interactive": {
+                "type": "step_reorder",
+                "prompt": "Put these SQL clauses in the order the engine processes them:",
+                "steps": ["SELECT", "FROM", "WHERE", "GROUP BY", "HAVING", "ORDER BY"],
+                "correct_order": [1, 0, 2, 3, 4, 5],
+            },
+        })
     return {
         "title": node.title,
         "intro": (
             f"This is a locally generated placeholder lesson for '{node.title}'. "
             "Connect an OpenRouter API key to generate real, personalized content."
         ),
-        "sections": [
-            {
-                "heading": "Learning objective",
-                "body": node.learning_objective,
-                "visual": _stub_visual_for(node),
-            },
-            {
-                "heading": "About this placeholder",
-                "body": (
-                    "Upvex generates lessons live via OpenRouter using the active GenerationContract "
-                    "and your learner profile. Since no API key is configured, this stub is served so "
-                    "the full product flow can be exercised in development — including lesson visuals."
-                ),
-            },
-        ],
+        "sections": sections,
         "key_takeaways": [
             f"Objective: {node.learning_objective}",
             f"Difficulty: {node.difficulty_tag}, Bloom level: {node.bloom_level}",
@@ -283,17 +370,66 @@ def _validate_quiz(quiz: dict) -> None:
     questions = quiz.get("questions")
     if not isinstance(questions, list) or len(questions) < 3:
         raise ValueError("Quiz must contain at least 3 questions")
+    mode = quiz.get("mode", "classic")
+    if mode not in ("classic", "sandbox", "mixed"):
+        quiz["mode"] = "classic"
     for q in questions:
-        if q.get("type") == "multiple_choice":
+        qtype = q.get("type")
+        if qtype == "multiple_choice":
             if not isinstance(q.get("options"), list) or q.get("correct_option") is None:
                 raise ValueError("Multiple choice question missing options/correct_option")
-        elif q.get("type") == "short_answer":
+        elif qtype == "short_answer":
             if not q.get("expected_concepts"):
                 raise ValueError("Short answer question missing expected_concepts")
+        elif qtype == "sandbox_sql":
+            for key in ("dataset", "starter_sql", "solution_sql", "question_text"):
+                if not q.get(key):
+                    raise ValueError(f"sandbox_sql question missing {key}")
+            if not isinstance(q.get("hints"), list):
+                q["hints"] = []
 
 
 def _stub_quiz(node: ConceptNode) -> dict:
+    if is_sql_topic(node.topic_id):
+        problem = problem_for_concept(node.id)
+        if problem:
+            return {
+                "mode": "mixed",
+                "questions": [
+                    {
+                        "type": "sandbox_sql",
+                        "question_text": problem["question_text"],
+                        "dataset": problem["dataset"],
+                        "starter_sql": problem["starter_sql"],
+                        "solution_sql": problem["solution_sql"],
+                        "hints": problem.get("hints", []),
+                        "order_sensitive": problem.get("order_sensitive", False),
+                        "difficulty": problem.get("difficulty", 4),
+                        "explanation": problem.get("explanation", ""),
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question_text": f"Which SQL clause filters rows before grouping?",
+                        "options": ["HAVING", "WHERE", "ORDER BY", "SELECT"],
+                        "correct_option": 1,
+                        "explanation": "WHERE filters individual rows before any GROUP BY aggregation.",
+                    },
+                    {
+                        "type": "multiple_choice",
+                        "question_text": f"What does a self-join accomplish?",
+                        "options": [
+                            "Joins a table to itself using aliases",
+                            "Deletes duplicate rows",
+                            "Creates a new table",
+                            "Indexes a column",
+                        ],
+                        "correct_option": 0,
+                        "explanation": "Self-joins relate rows within the same table, e.g. employee to manager.",
+                    },
+                ],
+            }
     return {
+        "mode": "classic",
         "questions": [
             {
                 "type": "multiple_choice",
@@ -332,7 +468,7 @@ def _stub_quiz(node: ConceptNode) -> dict:
                 "expected_concepts": [w.lower() for w in node.title.split()[:3]],
                 "explanation": "Any answer touching the concept's core ideas counts.",
             },
-        ]
+        ],
     }
 
 

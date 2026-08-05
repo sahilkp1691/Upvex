@@ -85,6 +85,24 @@ async def _seed_badges(session: AsyncSession) -> None:
         session.add(Badge(**b))
 
 
+async def _seed_contract_v3(session: AsyncSession) -> None:
+    """Activate GenerationContract v3 (interactive lessons + SQL sandbox)."""
+    existing = (
+        await session.execute(
+            select(GenerationContract).where(GenerationContract.version == 3)
+        )
+    ).scalar_one_or_none()
+    for row in (await session.execute(select(GenerationContract))).scalars().all():
+        row.is_active = False
+    if existing:
+        existing.persona_text = seed_data.GENERATION_CONTRACT_V3["persona_text"]
+        existing.structural_template = seed_data.GENERATION_CONTRACT_V3["structural_template"]
+        existing.constraints_text = seed_data.GENERATION_CONTRACT_V3["constraints_text"]
+        existing.is_active = True
+    else:
+        session.add(GenerationContract(**seed_data.GENERATION_CONTRACT_V3, is_active=True))
+
+
 async def _seed_badges_v2(session: AsyncSession) -> None:
     """Insert any badges added after the initial seed (idempotent by id)."""
     existing = set((await session.execute(select(Badge.id))).scalars().all())
@@ -118,6 +136,7 @@ MIGRATION_STEPS = [
     ("0005_add_user_email_verified", _add_user_email_verified),
     ("0006_seed_badges_v2", _seed_badges_v2),
     ("0007_seed_generation_contract_v2", _seed_contract_v2),
+    ("0008_seed_generation_contract_v3", _seed_contract_v3),
 ]
 
 
