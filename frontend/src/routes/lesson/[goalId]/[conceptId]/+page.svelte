@@ -767,6 +767,12 @@
 		margin-top: 14px;
 	}
 
+	.streak-lost {
+		color: var(--danger);
+		font-weight: 600;
+		margin-top: 10px;
+	}
+
 	.review-row {
 		display: grid;
 		grid-template-columns: 74px 1fr;
