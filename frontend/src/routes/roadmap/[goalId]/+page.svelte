@@ -249,7 +249,7 @@
 				{/each}
 			</div>
 		{:else if layout}
-			<GraphCanvas width={layout.width} height={layout.height} {focus}>
+			<GraphCanvas width={layout.width} height={layout.height} {focus} focusFirst>
 				<div class="graph" style="width: {layout.width}px; height: {layout.height}px">
 					<svg width={layout.width} height={layout.height}>
 						{#each layout.paths as p, i (i)}
