@@ -1,6 +1,6 @@
 """XP, streaks, and badge awarding — the gamification engine."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from math import floor, sqrt
 
 from sqlalchemy import func, select
@@ -55,25 +55,120 @@ def lesson_xp(difficulty_tag: str, quiz_score: float) -> int:
     return int((XP_LESSON_BASE + XP_QUIZ_MAX_BONUS * (quiz_score / 100)) * mult)
 
 
-async def touch_streak(db: AsyncSession, user_id: str) -> tuple[Streak, bool]:
-    """Record activity today. Returns (streak, extended) — extended True when the
-    streak counter grew (used to trigger streak bonus XP)."""
-    today = datetime.now(timezone.utc).date()
+def _today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
+def streak_payload(streak: Streak | None, *, today: date | None = None) -> dict:
+    """Serialize streak state for API responses, including at-risk warnings."""
+    today = today or _today()
+    yesterday = today - timedelta(days=1)
+    if streak is None:
+        return {
+            "current": 0,
+            "longest": 0,
+            "last_active_date": None,
+            "status": "inactive",
+            "warning": None,
+        }
+
+    current = int(streak.current_streak or 0)
+    last = streak.last_active_date
+    if current <= 0:
+        status = "inactive"
+        warning = None
+    elif last == today:
+        status = "active_today"
+        warning = None
+    elif last == yesterday:
+        status = "at_risk"
+        warning = f"Practice today or you'll lose your {current}-day streak."
+    else:
+        # Should have been synced to 0; treat as inactive if somehow stale
+        status = "inactive"
+        warning = None
+        current = 0
+
+    return {
+        "current": current,
+        "longest": int(streak.longest_streak or 0),
+        "last_active_date": last.isoformat() if last else None,
+        "status": status,
+        "warning": warning,
+    }
+
+
+async def sync_streak(
+    db: AsyncSession,
+    user_id: str,
+    *,
+    today: date | None = None,
+) -> tuple[Streak | None, int]:
+    """Reset a broken streak (missed a full calendar day).
+
+    Returns ``(streak, broken_from)`` where ``broken_from`` is the previous
+    current_streak when a reset happened, else 0.
+
+    Safe to call on every gamification summary load so breakage does not depend
+    solely on the Celery beat job.
+    """
+    today = today or _today()
+    yesterday = today - timedelta(days=1)
     streak = await db.get(Streak, user_id)
+    if streak is None:
+        return None, 0
+    if streak.current_streak > 0 and (
+        streak.last_active_date is None or streak.last_active_date < yesterday
+    ):
+        broken_from = int(streak.current_streak)
+        streak.current_streak = 0
+        return streak, broken_from
+    return streak, 0
+
+
+async def touch_streak(
+    db: AsyncSession,
+    user_id: str,
+    *,
+    today: date | None = None,
+) -> tuple[Streak, bool, bool, int]:
+    """Record activity today.
+
+    Returns ``(streak, extended, broken, previous_streak)``:
+    - ``extended``: counter grew (or started) today — used for streak bonus XP
+    - ``broken``: a prior streak was lost and a new one started at 1
+    - ``previous_streak``: length that was lost when ``broken`` is True
+    """
+    today = today or _today()
+    yesterday = today - timedelta(days=1)
+
+    # Ensure missed days are zeroed before we decide how to continue
+    streak, broken_from_sync = await sync_streak(db, user_id, today=today)
     if streak is None:
         streak = Streak(user_id=user_id, current_streak=1, longest_streak=1, last_active_date=today)
         db.add(streak)
-        return streak, True
+        return streak, True, False, 0
 
-    if streak.last_active_date == today:
-        return streak, False
-    if streak.last_active_date == today - timedelta(days=1):
+    if streak.last_active_date == today and streak.current_streak > 0:
+        return streak, False, False, 0
+
+    previous = broken_from_sync
+    broken = broken_from_sync > 0
+
+    if streak.last_active_date == yesterday and streak.current_streak > 0:
         streak.current_streak += 1
+        extended = True
     else:
+        # New day after a break (or first activity after sync zeroed the streak)
+        if streak.current_streak > 0 and streak.last_active_date not in (None, today, yesterday):
+            previous = int(streak.current_streak)
+            broken = True
         streak.current_streak = 1
+        extended = True
+
     streak.last_active_date = today
-    streak.longest_streak = max(streak.longest_streak, streak.current_streak)
-    return streak, True
+    streak.longest_streak = max(streak.longest_streak or 0, streak.current_streak)
+    return streak, extended, broken, previous
 
 
 async def total_xp(db: AsyncSession, user_id: str) -> int:

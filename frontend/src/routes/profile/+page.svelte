@@ -60,7 +60,7 @@
 				</div>
 			</div>
 			<div class="streaks">
-				<div class="streak-pill">
+				<div class="streak-pill" class:at-risk={summary.streak.status === 'at_risk'}>
 					<span class="num">{summary.streak.current}</span>
 					<span class="label">Day streak</span>
 				</div>
@@ -69,6 +69,14 @@
 					<span class="label">Longest</span>
 				</div>
 			</div>
+			{#if summary.streak.warning}
+				<p class="streak-warn" class:broken={summary.streak.just_broken}>
+					{summary.streak.warning}
+					{#if summary.streak.status === 'at_risk'}
+						<a href="/topics">Keep it going</a>
+					{/if}
+				</p>
+			{/if}
 		</section>
 
 		<h2 class="section-h">Badge case</h2>
@@ -189,6 +197,39 @@
 		font-size: 28px;
 		font-weight: 800;
 		color: var(--warn);
+	}
+
+	.streak-pill .label {
+		font-size: 12px;
+		color: var(--text-dim);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		font-weight: 650;
+	}
+
+	.streak-pill.at-risk {
+		border-color: color-mix(in srgb, var(--warn) 50%, var(--border));
+		background: var(--warn-soft);
+	}
+
+	.streak-warn {
+		margin: 12px 0 0;
+		padding: 10px 12px;
+		border-radius: var(--radius-sm);
+		border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
+		background: var(--warn-soft);
+		color: var(--text-dim);
+		font-size: 13.5px;
+	}
+
+	.streak-warn.broken {
+		border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+		background: var(--danger-soft);
+	}
+
+	.streak-warn a {
+		margin-left: 6px;
+		font-weight: 650;
 	}
 
 	.section-h {

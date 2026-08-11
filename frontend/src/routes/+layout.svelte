@@ -64,6 +64,18 @@
 				)
 			: 0
 	);
+
+	let streakWarning = $derived($gamification?.streak?.warning || null);
+	let streakAtRisk = $derived($gamification?.streak?.status === 'at_risk');
+	let streakJustBroken = $derived(Boolean($gamification?.streak?.just_broken));
+
+	let streakBannerDismissed = $state(false);
+
+	$effect(() => {
+		// Re-show banner when warning text changes (new day / new break)
+		streakWarning;
+		streakBannerDismissed = false;
+	});
 </script>
 
 <div class="shell mesh-bg">
@@ -81,8 +93,17 @@
 				</nav>
 				<div class="user-area">
 					{#if $gamification}
-						<a href="/profile" class="hud" title="Your progress">
-							<span class="hud-chip streak" class:active={$gamification.streak.current > 0}>
+						<a
+							href="/profile"
+							class="hud"
+							title={streakWarning || 'Your progress'}
+						>
+							<span
+								class="hud-chip streak"
+								class:active={$gamification.streak.current > 0}
+								class:at-risk={streakAtRisk}
+								class:broken={streakJustBroken}
+							>
 								<span class="flame" aria-hidden="true">&#9670;</span>
 								{$gamification.streak.current}
 								<span class="hud-label">streak</span>
@@ -109,6 +130,17 @@
 				</div>
 			{/if}
 		</header>
+		{#if $currentUser && streakWarning && !streakBannerDismissed}
+			<div class="streak-banner" class:broken={streakJustBroken} class:at-risk={streakAtRisk}>
+				<span class="sb-copy">{streakWarning}</span>
+				{#if streakAtRisk}
+					<a class="btn btn-sm btn-primary" href="/topics">Keep streak</a>
+				{/if}
+				<button class="btn btn-sm btn-ghost" onclick={() => (streakBannerDismissed = true)}
+					>Dismiss</button
+				>
+			</div>
+		{/if}
 	{/if}
 	<main>
 		{@render children()}
@@ -191,6 +223,42 @@
 
 	.hud .streak.active .flame {
 		animation: streak-pulse 1.2s ease-in-out infinite;
+	}
+
+	.hud .streak.at-risk {
+		border-color: color-mix(in srgb, var(--warn) 55%, var(--border));
+		background: var(--warn-soft);
+		color: var(--warn);
+	}
+
+	.hud .streak.broken {
+		border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+		color: var(--danger);
+	}
+
+	.streak-banner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px 14px;
+		margin: 0 20px;
+		padding: 10px 14px;
+		border-radius: var(--radius-sm);
+		border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
+		background: var(--warn-soft);
+		color: var(--text);
+		font-size: 13.5px;
+	}
+
+	.streak-banner.broken {
+		border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+		background: var(--danger-soft);
+	}
+
+	.sb-copy {
+		flex: 1;
+		min-width: 200px;
+		font-weight: 550;
 	}
 
 	.hud .lvl {

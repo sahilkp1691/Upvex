@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import Badge, Streak, User, UserBadge, XPLedger
+from ..models import Badge, User, UserBadge, XPLedger
 from ..services import xp as xp_service
 
 router = APIRouter()
@@ -14,7 +14,11 @@ router = APIRouter()
 async def summary(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     total = await xp_service.total_xp(db, user.id)
     progress = xp_service.level_from_xp(total)
-    streak = await db.get(Streak, user.id)
+    streak, broken_from = await xp_service.sync_streak(db, user.id)
+    if broken_from:
+        await db.commit()
+    else:
+        await db.flush()
     badge_rows = (
         await db.execute(
             select(Badge, UserBadge.earned_at)
@@ -29,17 +33,23 @@ async def summary(user: User = Depends(get_current_user), db: AsyncSession = Dep
             .order_by(XPLedger.created_at.desc()).limit(10)
         )
     ).scalars().all()
+    streak_info = xp_service.streak_payload(streak)
+    if broken_from:
+        streak_info["just_broken"] = True
+        streak_info["broken_from"] = broken_from
+        streak_info["warning"] = (
+            f"Your {broken_from}-day streak ended — practice today to start a new one."
+        )
+    else:
+        streak_info["just_broken"] = False
+        streak_info["broken_from"] = None
     return {
         "total_xp": total,
         "level": progress["level"],
         "xp_into_level": progress["xp_into_level"],
         "xp_to_next_level": progress["xp_to_next_level"],
         "next_level_at": progress["next_level_at"],
-        "streak": {
-            "current": streak.current_streak if streak else 0,
-            "longest": streak.longest_streak if streak else 0,
-            "last_active_date": streak.last_active_date.isoformat() if streak and streak.last_active_date else None,
-        },
+        "streak": streak_info,
         "badges": [
             {"id": b.id, "name": b.name, "description": b.description, "earned_at": earned.isoformat()}
             for b, earned in badge_rows

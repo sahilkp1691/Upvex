@@ -428,8 +428,8 @@ async def submit_quiz(
     # Gamification: XP, streak, badges
     earned_xp = xp_service.lesson_xp(node.difficulty_tag, quiz_score)
     await xp_service.award_xp(db, user.id, earned_xp, "lesson_complete", completion.id)
-    streak, extended = await xp_service.touch_streak(db, user.id)
-    if extended and streak.current_streak > 1:
+    streak, extended, broken, previous_streak = await xp_service.touch_streak(db, user.id)
+    if extended and streak.current_streak > 1 and not broken:
         await xp_service.award_xp(db, user.id, xp_service.XP_STREAK_BONUS, "streak_bonus")
         earned_xp += xp_service.XP_STREAK_BONUS
 
@@ -451,6 +451,19 @@ async def submit_quiz(
 
     await db.commit()
 
+    streak_info = xp_service.streak_payload(streak)
+    streak_info["extended"] = extended
+    streak_info["broken"] = broken
+    streak_info["previous"] = previous_streak if broken else None
+    if broken and previous_streak > 0:
+        streak_info["message"] = (
+            f"Your {previous_streak}-day streak was lost. Starting a new one today."
+        )
+    elif extended and streak.current_streak > 1:
+        streak_info["message"] = f"Streak extended to {streak.current_streak} days!"
+    else:
+        streak_info["message"] = None
+
     return {
         "quiz_score": quiz_score,
         "raw_quiz_score": round(raw_quiz_score, 1),
@@ -458,7 +471,7 @@ async def submit_quiz(
         "concept_score_delta": round(delta, 1),
         "review": review,
         "xp_earned": earned_xp,
-        "streak": {"current": streak.current_streak, "longest": streak.longest_streak},
+        "streak": streak_info,
         "badges_earned": [{"id": b.id, "name": b.name, "description": b.description} for b in badges],
         "level": progress["level"],
         "xp_into_level": progress["xp_into_level"],

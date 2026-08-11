@@ -1,7 +1,8 @@
 """Daily Celery beat job: evaluate streak continuation/breakage for all users.
 
-Streaks are extended in real time when users complete lessons (services.xp.touch_streak);
-this job handles the breakage side — resetting current_streak for users who missed a day.
+Streaks are extended in real time when users complete lessons (services.xp.touch_streak).
+Breakage is also applied lazily on gamification summary loads; this job covers users
+who are not actively opening the app.
 """
 
 import asyncio

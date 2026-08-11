@@ -164,6 +164,17 @@
 			}
 			await refreshGamification(get);
 			pushToast(`+${quizResult.xp_earned} XP`, `Streak: ${quizResult.streak.current} days`, 'xp');
+			if (quizResult.streak?.broken && quizResult.streak?.previous) {
+				pushToast(
+					'Streak lost',
+					quizResult.streak.message ||
+						`Your ${quizResult.streak.previous}-day streak ended. Starting fresh.`,
+					'error',
+					7000
+				);
+			} else if (quizResult.streak?.message && quizResult.streak?.extended) {
+				pushToast('Streak', quizResult.streak.message, 'info', 4500);
+			}
 			for (const b of quizResult.badges_earned) {
 				pushToast(`Badge earned: ${b.name}`, b.description, 'badge', 6000);
 			}
@@ -366,6 +377,12 @@
 				{/if}
 				{#if quizResult.root_gap_resolved}
 					<p class="resolved">Root gap resolved — concepts that depended on this just got closer.</p>
+				{/if}
+				{#if quizResult.streak?.broken && quizResult.streak?.previous}
+					<p class="streak-lost">
+						{quizResult.streak.message ||
+							`Your ${quizResult.streak.previous}-day streak was lost. Starting a new one today.`}
+					</p>
 				{/if}
 			</div>
 
