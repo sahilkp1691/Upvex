@@ -447,8 +447,8 @@
 
 	.layout {
 		display: grid;
-		grid-template-columns: 1fr min(380px, 40vw);
-		gap: 16px;
+		grid-template-columns: 1fr minmax(320px, 400px);
+		gap: 20px;
 		align-items: start;
 	}
 
