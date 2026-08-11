@@ -438,6 +438,7 @@
 			<button class="btn danger-outline" disabled={resetting || !graph.nodes.length} onclick={resetGraph}>
 				{resetting ? 'Resetting...' : 'Reset graph'}
 			</button>
+			<a class="btn" href={`/admin/diagnostics/${topicId}`}>Diagnostics</a>
 			<button class="btn" class:active={linkMode} onclick={toggleLinkMode}>
 				{linkMode ? 'Cancel linking' : 'Link prerequisites'}
 			</button>
@@ -532,6 +533,11 @@
 						</button>
 						<button class="btn" onclick={startNew}>Add concept</button>
 					</div>
+					<p class="muted empty-hint">
+						When the graph has concepts, open
+						<a href={`/admin/diagnostics/${topicId}`}>Diagnostics</a> to build the quiz bank
+						learners need before they can start.
+					</p>
 				</div>
 			{/if}
 		</div>
@@ -645,6 +651,7 @@
 					<li>Root concepts are entry points with no hard prerequisites.</li>
 					<li>Validate DAG checks orphans, unreachable nodes, and cycles.</li>
 					<li>Reset graph clears concepts and related diagnostic/lesson cache for this topic.</li>
+					<li>After building concepts, open Diagnostics to fill the adaptive quiz bank.</li>
 				</ul>
 			{:else if panelMode === 'new' || panelMode === 'node'}
 				<div class="panel-head">
@@ -1010,6 +1017,11 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
+	}
+
+	.empty-hint {
+		margin: 8px 0 0;
+		font-size: 13px;
 	}
 
 	.side-panel {

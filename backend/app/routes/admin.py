@@ -67,18 +67,30 @@ async def update_category(category_id: str, payload: CategoryPayload, db: AsyncS
 
 @router.get("/topics")
 async def list_topics(db: AsyncSession = Depends(get_db)):
+    from ..services import diagnostic_bank as bank
+
     topics = (await db.execute(select(Topic))).scalars().all()
     node_counts = dict(
         (await db.execute(select(ConceptNode.topic_id, func.count()).group_by(ConceptNode.topic_id))).all()
     )
-    return [
-        {
-            "id": t.id, "category_id": t.category_id, "name": t.name,
-            "description": t.description, "is_active": t.is_active,
-            "concept_count": node_counts.get(t.id, 0),
-        }
-        for t in topics
-    ]
+    result = []
+    for t in topics:
+        ready = await bank.readiness(db, t.id)
+        result.append(
+            {
+                "id": t.id,
+                "category_id": t.category_id,
+                "name": t.name,
+                "description": t.description,
+                "is_active": t.is_active,
+                "concept_count": node_counts.get(t.id, 0),
+                "diagnostic_ready": ready["ready"],
+                "diagnostic_question_count": ready["question_count"],
+                "diagnostic_issues": ready["issues"],
+            }
+        )
+    return result
+
 
 
 @router.post("/topics")
@@ -332,6 +344,161 @@ async def reset_graph(
     }
 
 
+# ---------- Diagnostic question bank ----------
+
+class DiagnosticQuestionPayload(BaseModel):
+    concept_node_id: str
+    difficulty: str = Field(pattern="^(easy|medium|hard)$")
+    type: str = Field(pattern="^(multiple_choice|short_answer)$")
+    question_text: str
+    options: list[str] | None = None
+    correct_option: int | None = None
+    expected_concepts: list[str] | None = None
+
+
+class DiagnosticDraftPayload(BaseModel):
+    concept_ids: list[str] | None = None
+    count_per_concept: int = Field(default=2, ge=1, le=4)
+
+
+class DiagnosticBulkCreatePayload(BaseModel):
+    questions: list[DiagnosticQuestionPayload]
+
+
+@router.get("/topics/{topic_id}/diagnostics")
+async def list_diagnostics(topic_id: str, db: AsyncSession = Depends(get_db)):
+    from ..services import diagnostic_bank as bank
+
+    topic = await db.get(Topic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "Topic not found")
+    nodes = (
+        await db.execute(select(ConceptNode).where(ConceptNode.topic_id == topic_id))
+    ).scalars().all()
+    questions = await bank.list_questions(db, topic_id)
+    ready = await bank.readiness(db, topic_id)
+    return {
+        "topic_id": topic.id,
+        "topic_name": topic.name,
+        "readiness": ready,
+        "concepts": [
+            {
+                "id": n.id,
+                "title": n.title,
+                "difficulty_tag": n.difficulty_tag,
+                "learning_objective": n.learning_objective,
+            }
+            for n in nodes
+        ],
+        "questions": questions,
+    }
+
+
+@router.post("/topics/{topic_id}/diagnostics")
+async def create_diagnostic(topic_id: str, payload: DiagnosticQuestionPayload, db: AsyncSession = Depends(get_db)):
+    from ..services import diagnostic_bank as bank
+
+    if await db.get(Topic, topic_id) is None:
+        raise HTTPException(404, "Topic not found")
+    node = await db.get(ConceptNode, payload.concept_node_id)
+    if node is None or node.topic_id != topic_id:
+        raise HTTPException(404, "Concept not found in this topic")
+    err = bank.validate_question_payload(payload.model_dump())
+    if err:
+        raise HTTPException(422, err)
+    q = DiagnosticQuestion(topic_id=topic_id, **payload.model_dump())
+    db.add(q)
+    await db.commit()
+    return {"id": q.id}
+
+
+@router.post("/topics/{topic_id}/diagnostics/bulk")
+async def bulk_create_diagnostics(
+    topic_id: str,
+    payload: DiagnosticBulkCreatePayload,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services import diagnostic_bank as bank
+
+    if await db.get(Topic, topic_id) is None:
+        raise HTTPException(404, "Topic not found")
+    created: list[str] = []
+    skipped: list[str] = []
+    for item in payload.questions:
+        node = await db.get(ConceptNode, item.concept_node_id)
+        if node is None or node.topic_id != topic_id:
+            skipped.append(item.question_text[:60])
+            continue
+        err = bank.validate_question_payload(item.model_dump())
+        if err:
+            skipped.append(item.question_text[:60])
+            continue
+        q = DiagnosticQuestion(topic_id=topic_id, **item.model_dump())
+        db.add(q)
+        await db.flush()
+        created.append(q.id)
+    await db.commit()
+    return {"created_ids": created, "created_count": len(created), "skipped_count": len(skipped)}
+
+
+@router.post("/topics/{topic_id}/diagnostics/draft")
+async def draft_diagnostics(
+    topic_id: str,
+    payload: DiagnosticDraftPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services import diagnostic_bank as bank
+    from ..generation import openrouter
+
+    topic = await db.get(Topic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "Topic not found")
+    drafts = await bank.draft_questions(
+        db,
+        topic,
+        concept_ids=payload.concept_ids,
+        count_per_concept=payload.count_per_concept,
+    )
+    return {
+        "source": "ai" if openrouter.is_configured() else "stub",
+        "drafts": drafts,
+        "count": len(drafts),
+    }
+
+
+@router.patch("/diagnostics/{question_id}")
+async def update_diagnostic(
+    question_id: str,
+    payload: DiagnosticQuestionPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services import diagnostic_bank as bank
+
+    q = await db.get(DiagnosticQuestion, question_id)
+    if q is None:
+        raise HTTPException(404, "Question not found")
+    node = await db.get(ConceptNode, payload.concept_node_id)
+    if node is None or node.topic_id != q.topic_id:
+        raise HTTPException(404, "Concept not found in this topic")
+    err = bank.validate_question_payload(payload.model_dump())
+    if err:
+        raise HTTPException(422, err)
+    for k, v in payload.model_dump().items():
+        setattr(q, k, v)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.delete("/diagnostics/{question_id}")
+async def delete_diagnostic(question_id: str, db: AsyncSession = Depends(get_db)):
+    q = await db.get(DiagnosticQuestion, question_id)
+    if q is None:
+        raise HTTPException(404, "Question not found")
+    await db.delete(q)
+    await db.commit()
+    return {"ok": True}
+
+
 @router.post("/topics/{topic_id}/nodes")
 async def create_node(topic_id: str, payload: ConceptNodePayload, db: AsyncSession = Depends(get_db)):
     if await db.get(Topic, topic_id) is None:
@@ -358,6 +525,10 @@ async def delete_node(node_id: str, db: AsyncSession = Depends(get_db)):
     node = await db.get(ConceptNode, node_id)
     if node is None:
         raise HTTPException(404, "Node not found")
+    await db.execute(delete(DiagnosticQuestion).where(DiagnosticQuestion.concept_node_id == node_id))
+    await db.execute(delete(LessonCompletion).where(LessonCompletion.concept_node_id == node_id))
+    await db.execute(delete(ConceptVisit).where(ConceptVisit.concept_node_id == node_id))
+    await db.execute(delete(GeneratedContent).where(GeneratedContent.concept_node_id == node_id))
     await db.execute(delete(ConceptEdge).where(
         (ConceptEdge.from_concept_id == node_id) | (ConceptEdge.to_concept_id == node_id)
     ))

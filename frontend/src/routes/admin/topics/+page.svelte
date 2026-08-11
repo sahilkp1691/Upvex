@@ -90,7 +90,16 @@
 					<span class="tag {topic.is_active ? 'tag-up' : 'tag-dim'}">
 						{topic.is_active ? 'Active' : 'Inactive'}
 					</span>
+					<span
+						class="tag {topic.diagnostic_ready ? 'tag-up' : 'tag-warn'}"
+						title={(topic.diagnostic_issues || []).join(' ')}
+					>
+						{topic.diagnostic_ready
+							? `Diag ready (${topic.diagnostic_question_count})`
+							: `Diag ${topic.diagnostic_question_count}/8`}
+					</span>
 					<a class="btn" href={`/admin/graph/${topic.id}`}>Edit graph</a>
+					<a class="btn" href={`/admin/diagnostics/${topic.id}`}>Diagnostics</a>
 					<button class="btn" onclick={() => toggleTopic(topic)}>
 						{topic.is_active ? 'Deactivate' : 'Activate'}
 					</button>

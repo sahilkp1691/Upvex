@@ -57,6 +57,8 @@ async def create_goal(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from ..services import diagnostic_bank as bank
+
     topic = await db.get(Topic, payload.topic_id)
     if topic is None or not topic.is_active:
         raise HTTPException(404, "Topic not found")
@@ -67,6 +69,15 @@ async def create_goal(
     ).scalar_one_or_none()
     if existing:
         return _goal_dict(existing, topic.name)
+
+    ready = await bank.readiness(db, topic.id)
+    if not ready["ready"]:
+        raise HTTPException(
+            422,
+            ready["message"]
+            or "This topic is not ready for a diagnostic yet — the question bank is incomplete.",
+        )
+
     goal = UserGoal(user_id=user.id, topic_id=payload.topic_id, status="diagnostic_pending")
     db.add(goal)
     await db.commit()

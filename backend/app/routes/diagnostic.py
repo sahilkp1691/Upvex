@@ -103,8 +103,17 @@ async def start_diagnostic(
         await db.execute(select(DiagnosticQuestion).where(DiagnosticQuestion.topic_id == goal.topic_id))
     ).scalars().all()
     if not pool:
-        raise HTTPException(500, "No diagnostic questions seeded for this topic")
+        raise HTTPException(
+            422,
+            "No diagnostic questions for this topic yet. An admin needs to add a question bank first.",
+        )
+    from ..services.diagnostic_bank import MIN_BANK_SIZE
 
+    if len(pool) < MIN_BANK_SIZE:
+        raise HTTPException(
+            422,
+            f"Diagnostic bank is incomplete ({len(pool)}/{MIN_BANK_SIZE} questions). Try again after an admin finishes the bank.",
+        )
     question = _pick_question(pool, attempt.responses, _next_difficulty(attempt.responses))
     if question is None:
         return {"attempt_id": attempt.id, "done": True, "answered": len(attempt.responses)}

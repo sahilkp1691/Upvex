@@ -111,6 +111,16 @@
 								<button class="btn btn-primary" onclick={() => goto(`/diagnostic/${goal.id}`)}>
 									Resume diagnostic
 								</button>
+							{:else if !topic.diagnostic_ready}
+								<div class="row">
+									<span class="tag tag-warn">Coming soon</span>
+									<span class="muted small"
+										>{topic.diagnostic_message || 'Diagnostic bank still being prepared'}</span
+									>
+								</div>
+								<button class="btn" disabled title={topic.diagnostic_message || 'Not ready'}>
+									Not ready yet
+								</button>
 							{:else}
 								<button
 									class="btn btn-primary"
