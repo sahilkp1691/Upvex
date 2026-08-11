@@ -843,10 +843,16 @@
 
 	.editor {
 		display: grid;
-		grid-template-columns: 1fr min(340px, 36vw);
-		gap: 16px;
+		grid-template-columns: 1fr minmax(300px, 380px);
+		gap: 20px;
 		align-items: start;
-		min-height: 520px;
+		min-height: 560px;
+	}
+
+	@media (max-width: 1100px) {
+		.editor {
+			grid-template-columns: 1fr minmax(280px, 340px);
+		}
 	}
 
 	@media (max-width: 960px) {
@@ -865,8 +871,8 @@
 	}
 
 	:global(.admin-canvas .viewport) {
-		min-height: 560px;
-		height: min(80vh, 900px);
+		min-height: 600px;
+		height: min(82vh, 960px);
 	}
 
 	.validation-banner {

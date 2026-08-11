@@ -35,7 +35,11 @@
 
 <style>
 	.admin-wide {
-		max-width: 1180px;
+		/* Graph editor + diagnostics need near full-bleed width */
+		max-width: min(1720px, 100%);
+		width: 100%;
+		padding-left: clamp(16px, 2.2vw, 36px);
+		padding-right: clamp(16px, 2.2vw, 36px);
 	}
 
 	.admin-head {
