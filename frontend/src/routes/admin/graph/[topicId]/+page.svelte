@@ -1230,4 +1230,33 @@
 		font-size: 11px;
 		color: var(--text-faint);
 	}
+
+	.quick-suggest {
+		margin-bottom: 10px;
+	}
+
+	.quick-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+
+	.chip {
+		padding: 5px 10px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--bg-elevated);
+		color: var(--text-dim);
+		font-size: 12px;
+		cursor: pointer;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.chip:hover {
+		border-color: var(--accent);
+		color: var(--text);
+	}
 </style>
