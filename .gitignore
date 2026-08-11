@@ -20,4 +20,3 @@ frontend/.env
 
 # OS / editor
 .DS_Store
-.venv/
