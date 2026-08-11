@@ -72,7 +72,15 @@
 	</header>
 
 	{#if loading}
-		<p class="faint">Loading catalog...</p>
+		<div class="skeleton-stack" aria-busy="true">
+			<div class="skel skel-title"></div>
+			<div class="skel skel-line"></div>
+			<div class="topic-skels">
+				<div class="skel skel-card"></div>
+				<div class="skel skel-card"></div>
+				<div class="skel skel-card"></div>
+			</div>
+		</div>
 	{:else}
 		{#each catalog as category (category.id)}
 			<section>
@@ -228,5 +236,51 @@
 	.btn {
 		align-self: flex-start;
 		margin-top: 4px;
+	}
+
+	.skeleton-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		margin-top: 28px;
+	}
+
+	.skel {
+		border-radius: var(--radius-sm);
+		background: linear-gradient(90deg, var(--bg-card), var(--bg-hover), var(--bg-card));
+		background-size: 200% 100%;
+		animation: skel 1.2s ease-in-out infinite;
+	}
+
+	.skel-title {
+		height: 34px;
+		width: 48%;
+	}
+
+	.skel-line {
+		height: 14px;
+		width: 70%;
+	}
+
+	.topic-skels {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		margin-top: 18px;
+	}
+
+	.skel-card {
+		height: 110px;
+		width: 100%;
+		border-radius: var(--radius);
+	}
+
+	@keyframes skel {
+		0% {
+			background-position: 100% 0;
+		}
+		100% {
+			background-position: -100% 0;
+		}
 	}
 </style>

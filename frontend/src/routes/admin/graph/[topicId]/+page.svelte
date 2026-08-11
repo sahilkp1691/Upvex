@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { get, post, patch, del } from '$lib/api.js';
 	import { layoutDag, DEFAULT_NODE_W as NODE_W, DEFAULT_NODE_H as NODE_H } from '$lib/graphLayout.js';
+	import GraphCanvas from '$lib/GraphCanvas.svelte';
 	import { pushToast } from '$lib/stores.js';
 
 	const topicId = page.params.topicId;
@@ -9,6 +10,8 @@
 	let graph = $state(null);
 	let loading = $state(true);
 	let saving = $state(false);
+	let validating = $state(false);
+	let validation = $state(null);
 
 	/** @type {null | 'idle' | 'node' | 'edge' | 'new'} */
 	let panelMode = $state('idle');
@@ -22,6 +25,7 @@
 	let linkFromId = $state(null);
 
 	let search = $state('');
+	let focusNodeId = $state(null);
 
 	function blankNode() {
 		return {
@@ -48,6 +52,13 @@
 
 	let layout = $derived(graph ? layoutDag(graph) : null);
 
+	let focus = $derived.by(() => {
+		if (!layout || !focusNodeId) return null;
+		const p = layout.pos[focusNodeId];
+		if (!p) return null;
+		return { x: p.x, y: p.y, w: NODE_W, h: NODE_H };
+	});
+
 	let filteredNodes = $derived.by(() => {
 		if (!graph) return [];
 		const q = search.trim().toLowerCase();
@@ -71,7 +82,7 @@
 		nodeForm = blankNode();
 	}
 
-	function selectNode(node) {
+	function selectNode(node, { shouldFocus = true } = {}) {
 		if (linkMode) {
 			handleLinkClick(node.id);
 			return;
@@ -80,6 +91,12 @@
 		selectedEdgeId = null;
 		panelMode = 'node';
 		nodeForm = { ...node };
+		if (shouldFocus) focusNodeId = node.id;
+	}
+
+	function jumpTo(node) {
+		selectNode(node, { shouldFocus: true });
+		focusNodeId = node.id;
 	}
 
 	function selectEdge(edgePath) {
@@ -111,6 +128,26 @@
 		}
 	}
 
+	async function runValidate() {
+		validating = true;
+		try {
+			validation = await get(`/admin/topics/${topicId}/graph/validate`);
+			if (validation.ok) {
+				pushToast('Graph healthy', `${validation.node_count} nodes · engine ${validation.engine}`, 'info');
+			} else {
+				pushToast(
+					'Graph issues found',
+					validation.issues.map((i) => i.code).join(', '),
+					'error'
+				);
+			}
+		} catch (err) {
+			pushToast('Validate failed', err.message, 'error');
+		} finally {
+			validating = false;
+		}
+	}
+
 	async function handleLinkClick(nodeId) {
 		if (!linkFromId) {
 			linkFromId = nodeId;
@@ -131,6 +168,7 @@
 			pushToast('Prerequisite linked', `${titleOf(linkFromId)} → ${titleOf(nodeId)}`);
 			linkFromId = null;
 			await load();
+			validation = null;
 		} catch (err) {
 			pushToast('Edge rejected', err.message, 'error');
 			linkFromId = null;
@@ -149,6 +187,7 @@
 				selectedNodeId = res.id;
 				selectedEdgeId = null;
 				panelMode = 'node';
+				focusNodeId = res.id;
 				const created = graph?.nodes.find((n) => n.id === res.id);
 				if (created) nodeForm = { ...created };
 				else nodeForm = blankNode();
@@ -160,6 +199,7 @@
 				const updated = graph.nodes.find((n) => n.id === id);
 				if (updated) selectNode(updated);
 			}
+			validation = null;
 		} catch (err) {
 			pushToast('Save failed', err.message, 'error');
 		} finally {
@@ -177,6 +217,7 @@
 			pushToast('Concept deleted', node.title);
 			clearSelection();
 			await load();
+			validation = null;
 		} catch (err) {
 			pushToast('Delete failed', err.message, 'error');
 		} finally {
@@ -191,6 +232,7 @@
 			await patch(`/admin/edges/${selectedEdgeId}`, { edge_type: edgeType });
 			pushToast('Edge updated', edgeType);
 			await load();
+			validation = null;
 		} catch (err) {
 			pushToast('Update failed', err.message, 'error');
 		} finally {
@@ -206,6 +248,7 @@
 			pushToast('Edge removed');
 			clearSelection();
 			await load();
+			validation = null;
 		} catch (err) {
 			pushToast('Delete failed', err.message, 'error');
 		} finally {
@@ -226,6 +269,7 @@
 			classes.push('dim');
 		}
 		if (node.is_root) classes.push('root');
+		if (focusNodeId === node.id) classes.push('focused');
 		return classes.join(' ');
 	}
 </script>
@@ -237,13 +281,19 @@
 <a href="/admin/topics" class="back">Back to topics</a>
 
 {#if loading}
-	<p class="faint">Loading graph...</p>
+	<div class="skeleton-stack" aria-busy="true">
+		<div class="skel skel-title"></div>
+		<div class="skel skel-graph"></div>
+	</div>
 {:else if graph}
 	<header class="page-head">
 		<div>
 			<h1>{graph.topic_name}</h1>
 			<p class="muted">
 				{graph.nodes.length} concepts · {graph.edges.length} prerequisites
+				{#if validation}
+					· engine <span class="engine">{validation.engine}</span>
+				{/if}
 			</p>
 		</div>
 		<div class="toolbar">
@@ -253,12 +303,34 @@
 				placeholder="Find concept..."
 				bind:value={search}
 			/>
+			<button class="btn" disabled={validating} onclick={runValidate}>
+				{validating ? 'Checking...' : 'Validate DAG'}
+			</button>
 			<button class="btn" class:active={linkMode} onclick={toggleLinkMode}>
 				{linkMode ? 'Cancel linking' : 'Link prerequisites'}
 			</button>
 			<button class="btn btn-primary" onclick={startNew}>Add concept</button>
 		</div>
 	</header>
+
+	{#if validation && !validation.ok}
+		<div class="validation-banner">
+			<strong>Graph issues</strong>
+			<ul>
+				{#each validation.issues as issue (issue.code)}
+					<li>
+						{issue.detail}
+						{#if issue.node_ids?.length}
+							— {issue.node_ids
+								.slice(0, 4)
+								.map((id) => titleOf(id))
+								.join(', ')}{issue.node_ids.length > 4 ? '…' : ''}
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
 
 	{#if linkMode}
 		<p class="link-hint">
@@ -273,7 +345,7 @@
 	{#if search.trim() && filteredNodes.length}
 		<div class="jump-list">
 			{#each filteredNodes.slice(0, 8) as n (n.id)}
-				<button class="jump" onclick={() => selectNode(n)}>{n.title}</button>
+				<button class="jump" onclick={() => jumpTo(n)}>{n.title}</button>
 			{/each}
 		</div>
 	{/if}
@@ -281,7 +353,7 @@
 	<div class="editor">
 		<div class="canvas-pane">
 			{#if layout && graph.nodes.length}
-				<div class="graph-scroll">
+				<GraphCanvas width={layout.width} height={layout.height} {focus} class="admin-canvas">
 					<div class="graph" style="width: {layout.width}px; height: {layout.height}px">
 						<svg width={layout.width} height={layout.height}>
 							{#each layout.paths as p (p.id ?? `${p.from}-${p.to}`)}
@@ -318,7 +390,7 @@
 							</button>
 						{/each}
 					</div>
-				</div>
+				</GraphCanvas>
 			{:else}
 				<div class="empty-canvas card">
 					<p>No concepts yet. Add a concept to start building this topic's graph.</p>
@@ -332,12 +404,14 @@
 				<h2>Edit graph</h2>
 				<p class="muted help">
 					Click a concept to edit it. Click an edge to change its type or remove it. Use
-					<strong>Link prerequisites</strong> to connect concepts on the canvas.
+					<strong>Link prerequisites</strong> to connect concepts on the canvas. Scroll to zoom,
+					drag the background to pan.
 				</p>
 				<ul class="tips">
 					<li>Required edges are solid; recommended edges are dashed.</li>
 					<li>Root concepts are entry points with no hard prerequisites.</li>
-					<li>The graph must stay a DAG — cycles are blocked.</li>
+					<li>Validate DAG checks orphans, unreachable nodes, and cycles.</li>
+					<li>Knowledge graph runtime is free in-process (optional Apache AGE when self-hosting).</li>
 				</ul>
 			{:else if panelMode === 'new' || panelMode === 'node'}
 				<div class="panel-head">
@@ -519,20 +593,66 @@
 		min-width: 0;
 	}
 
-	.graph-scroll {
-		overflow: auto;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background:
-			radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 26px 26px,
-			var(--bg-elevated);
-		min-height: 480px;
-		max-height: calc(100vh - 220px);
-	}
-
 	.graph {
 		position: relative;
 		margin: 0 auto;
+	}
+
+	:global(.admin-canvas .viewport) {
+		min-height: 480px;
+		height: min(68vh, 720px);
+	}
+
+	.validation-banner {
+		margin: 0 0 12px;
+		padding: 12px 14px;
+		border-radius: var(--radius-sm);
+		border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+		background: var(--danger-soft);
+		font-size: 13.5px;
+		color: var(--text-dim);
+	}
+
+	.validation-banner strong {
+		color: var(--danger);
+		display: block;
+		margin-bottom: 6px;
+	}
+
+	.validation-banner ul {
+		margin: 0;
+		padding-left: 18px;
+	}
+
+	.engine {
+		color: var(--up);
+		font-weight: 650;
+	}
+
+	.skeleton-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.skel {
+		border-radius: var(--radius-sm);
+		background: linear-gradient(90deg, var(--bg-card), var(--bg-hover), var(--bg-card));
+		background-size: 200% 100%;
+		animation: skel 1.2s ease-in-out infinite;
+	}
+
+	.skel-title { height: 32px; width: 40%; }
+	.skel-graph { height: 420px; width: 100%; border-radius: var(--radius); }
+
+	@keyframes skel {
+		0% { background-position: 100% 0; }
+		100% { background-position: -100% 0; }
+	}
+
+	.g-node.focused {
+		outline: 2px solid var(--gold);
+		outline-offset: 2px;
 	}
 
 	svg {

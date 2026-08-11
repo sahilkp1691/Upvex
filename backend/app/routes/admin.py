@@ -150,6 +150,17 @@ async def get_graph(topic_id: str, db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.get("/topics/{topic_id}/graph/validate")
+async def validate_graph(topic_id: str, db: AsyncSession = Depends(get_db)):
+    """Run DAG health checks via the in-process knowledge graph runtime."""
+    from ..services.knowledge_graph import load_topic_graph
+
+    if await db.get(Topic, topic_id) is None:
+        raise HTTPException(404, "Topic not found")
+    kg = await load_topic_graph(db, topic_id)
+    return kg.validate()
+
+
 @router.post("/topics/{topic_id}/nodes")
 async def create_node(topic_id: str, payload: ConceptNodePayload, db: AsyncSession = Depends(get_db)):
     if await db.get(Topic, topic_id) is None:
@@ -186,22 +197,10 @@ async def delete_node(node_id: str, db: AsyncSession = Depends(get_db)):
 
 async def _would_create_cycle(db: AsyncSession, topic_id: str, from_id: str, to_id: str) -> bool:
     """Adding from->to creates a cycle iff `from` is reachable from `to`."""
-    edges = (
-        await db.execute(select(ConceptEdge).where(ConceptEdge.topic_id == topic_id))
-    ).scalars().all()
-    adjacency: dict[str, list[str]] = {}
-    for e in edges:
-        adjacency.setdefault(e.from_concept_id, []).append(e.to_concept_id)
-    stack, seen = [to_id], set()
-    while stack:
-        current = stack.pop()
-        if current == from_id:
-            return True
-        if current in seen:
-            continue
-        seen.add(current)
-        stack.extend(adjacency.get(current, []))
-    return False
+    from ..services.knowledge_graph import load_topic_graph
+
+    kg = await load_topic_graph(db, topic_id)
+    return kg.would_create_cycle(from_id, to_id)
 
 
 @router.post("/topics/{topic_id}/edges")

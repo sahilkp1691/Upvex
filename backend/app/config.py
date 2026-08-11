@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     model_quiz_generation: str = "anthropic/claude-sonnet-4.5"
     model_diagnostic_evaluator: str = "openai/gpt-4.1-mini"
 
+    # Knowledge graph runtime: "memory" (default, free, always works) or "age"
+    # (Apache AGE Postgres extension when self-hosting; falls back to memory).
+    graph_engine: str = "memory"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

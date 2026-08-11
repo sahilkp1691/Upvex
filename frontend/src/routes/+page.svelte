@@ -23,16 +23,31 @@
 	</header>
 
 	<section class="hero">
-		<div class="vector" aria-hidden="true">
-			<svg viewBox="0 0 24 24" fill="none">
-				<path d="M12 3 L20 19 L12 14.5 L4 19 Z" fill="url(#landGrad)" />
-				<defs>
-					<linearGradient id="landGrad" x1="4" y1="19" x2="20" y2="3" gradientUnits="userSpaceOnUse">
-						<stop offset="0" stop-color="#3d8bfd" />
-						<stop offset="1" stop-color="#2dd4a0" />
-					</linearGradient>
-				</defs>
+		<div class="hero-visual" aria-hidden="true">
+			<svg class="map-bg" viewBox="0 0 640 280" fill="none">
+				<path
+					class="map-edge"
+					d="M120 70 C180 70, 200 140, 260 140 S340 70, 400 70 S480 160, 540 160"
+				/>
+				<path class="map-edge soft" d="M120 70 C160 110, 180 200, 260 210 S360 180, 400 160" />
+				<path class="map-edge soft" d="M260 140 C300 140, 320 210, 400 210 S480 160, 540 160" />
+				<circle class="map-node done" cx="120" cy="70" r="14" />
+				<circle class="map-node done" cx="260" cy="140" r="14" />
+				<circle class="map-node next" cx="400" cy="70" r="16" />
+				<circle class="map-node" cx="400" cy="210" r="12" />
+				<circle class="map-node lock" cx="540" cy="160" r="12" />
 			</svg>
+			<div class="vector">
+				<svg viewBox="0 0 24 24" fill="none">
+					<path d="M12 3 L20 19 L12 14.5 L4 19 Z" fill="url(#landGrad)" />
+					<defs>
+						<linearGradient id="landGrad" x1="4" y1="19" x2="20" y2="3" gradientUnits="userSpaceOnUse">
+							<stop offset="0" stop-color="#3d8bfd" />
+							<stop offset="1" stop-color="#2dd4a0" />
+						</linearGradient>
+					</defs>
+				</svg>
+			</div>
 		</div>
 		<p class="brand-mark">Upvex</p>
 		<h1>Skills on an upward vector.</h1>
@@ -104,9 +119,80 @@
 		min-height: min(78vh, 720px);
 	}
 
+	.hero-visual {
+		position: relative;
+		width: min(640px, 92vw);
+		height: clamp(140px, 28vw, 220px);
+		margin-bottom: 8px;
+		display: grid;
+		place-items: center;
+	}
+
+	.map-bg {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0.9;
+	}
+
+	.map-edge {
+		stroke: color-mix(in srgb, var(--up) 55%, var(--border-strong));
+		stroke-width: 2.2;
+		stroke-linecap: round;
+		fill: none;
+		stroke-dasharray: 420;
+		stroke-dashoffset: 420;
+		animation: path-reveal 2.8s ease forwards;
+	}
+
+	.map-edge.soft {
+		stroke: var(--border-strong);
+		stroke-width: 1.5;
+		animation-delay: 0.35s;
+	}
+
+	.map-node {
+		fill: var(--bg-card);
+		stroke: var(--border-strong);
+		stroke-width: 2;
+	}
+
+	.map-node.done {
+		fill: color-mix(in srgb, var(--up) 35%, var(--bg-card));
+		stroke: var(--up);
+	}
+
+	.map-node.next {
+		fill: color-mix(in srgb, var(--up) 55%, var(--bg-card));
+		stroke: var(--up);
+		animation: next-glow 2.4s ease-in-out infinite;
+	}
+
+	.map-node.lock {
+		opacity: 0.45;
+	}
+
+	@keyframes path-reveal {
+		to {
+			stroke-dashoffset: 0;
+		}
+	}
+
+	@keyframes next-glow {
+		0%,
+		100% {
+			filter: drop-shadow(0 0 0 transparent);
+		}
+		50% {
+			filter: drop-shadow(0 0 10px color-mix(in srgb, var(--up) 60%, transparent));
+		}
+	}
+
 	.vector {
-		width: min(180px, 28vw);
-		margin-bottom: 18px;
+		position: relative;
+		z-index: 1;
+		width: min(88px, 16vw);
 		animation: vector-drift 6s ease-in-out infinite;
 		filter: drop-shadow(0 12px 40px rgba(45, 212, 160, 0.25));
 	}

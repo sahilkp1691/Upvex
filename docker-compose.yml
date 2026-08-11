@@ -8,6 +8,9 @@ services:
 
   # Local Postgres for development without a Supabase project.
   # Point DATABASE_URL at Supabase's Postgres instead when keys are ready.
+  # Knowledge graph runtime defaults to in-process (GRAPH_ENGINE=memory).
+  # Optional: install Apache AGE on Postgres and set GRAPH_ENGINE=age —
+  # the app falls back to memory if the extension is missing.
   postgres:
     image: postgres:16-alpine
     environment:

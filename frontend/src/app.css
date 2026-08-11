@@ -499,3 +499,32 @@ textarea.input {
 		opacity: 0.7;
 	}
 }
+
+/* Empty / skeleton primitives */
+.empty-state {
+	padding: 48px 24px;
+	text-align: center;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-elevated);
+}
+
+.empty-state h3 {
+	margin-bottom: 8px;
+}
+
+.skeleton-block {
+	border-radius: var(--radius-sm);
+	background: linear-gradient(90deg, var(--bg-card) 0%, var(--bg-hover) 45%, var(--bg-card) 90%);
+	background-size: 200% 100%;
+	animation: upvex-skel 1.2s ease-in-out infinite;
+}
+
+@keyframes upvex-skel {
+	0% {
+		background-position: 100% 0;
+	}
+	100% {
+		background-position: -100% 0;
+	}
+}

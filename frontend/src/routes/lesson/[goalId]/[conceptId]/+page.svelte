@@ -195,7 +195,11 @@
 
 <div class="page lesson-page" class:sandbox-mode={phase === 'quiz' && hasSandboxQuestion}>
 	{#if phase === 'loading'}
-		<p class="faint center">Loading...</p>
+		<div class="skeleton-stack center-skel" aria-busy="true">
+			<div class="skel skel-pulse"></div>
+			<div class="skel skel-title"></div>
+			<div class="skel skel-line"></div>
+		</div>
 	{:else if phase === 'generating'}
 		<div class="generating">
 			<div class="pulse-arrow">
@@ -406,8 +410,8 @@
 				</div>
 			{/if}
 
-			<button class="btn btn-primary big" onclick={() => goto(`/roadmap/${goalId}`)}>
-				Back to your roadmap
+			<button class="btn btn-primary big" onclick={() => goto(`/roadmap/${goalId}?celebrate=${conceptId}&root=${quizResult.root_gap_resolved ? '1' : '0'}`)}>
+				See your updated map
 			</button>
 		</div>
 	{/if}
@@ -425,6 +429,50 @@
 	.center {
 		text-align: center;
 		padding-top: 80px;
+	}
+
+	.center-skel {
+		max-width: 420px;
+		margin: 80px auto 0;
+		align-items: center;
+	}
+
+	.skel {
+		border-radius: var(--radius-sm);
+		background: linear-gradient(90deg, var(--bg-card), var(--bg-hover), var(--bg-card));
+		background-size: 200% 100%;
+		animation: skel 1.2s ease-in-out infinite;
+	}
+
+	.skel-pulse {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+	}
+
+	.skel-title {
+		height: 28px;
+		width: 70%;
+	}
+
+	.skel-line {
+		height: 14px;
+		width: 90%;
+	}
+
+	.skeleton-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	@keyframes skel {
+		0% {
+			background-position: 100% 0;
+		}
+		100% {
+			background-position: -100% 0;
+		}
 	}
 
 	.generating {

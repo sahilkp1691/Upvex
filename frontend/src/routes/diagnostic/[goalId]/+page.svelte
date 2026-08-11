@@ -159,7 +159,7 @@
 				{/each}
 			</div>
 
-			<button class="btn btn-primary big" onclick={() => goto(`/roadmap/${goalId}`)}>
+			<button class="btn btn-primary big" onclick={() => goto(`/roadmap/${goalId}?fresh=1`)}>
 				See your roadmap
 			</button>
 		</div>
