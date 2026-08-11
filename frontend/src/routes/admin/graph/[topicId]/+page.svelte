@@ -27,6 +27,13 @@
 	let search = $state('');
 	let focusNodeId = $state(null);
 
+	let suggestions = $state(null);
+	let suggestionsLoading = $state(false);
+	let applying = $state(false);
+	let resetting = $state(false);
+	let expandedSubtopic = $state(null);
+	let showSuggestions = $state(true);
+
 	function blankNode() {
 		return {
 			title: '',
@@ -40,6 +47,7 @@
 
 	$effect(() => {
 		load();
+		loadSuggestions(false);
 	});
 
 	async function load() {
@@ -47,6 +55,21 @@
 			graph = await get(`/admin/topics/${topicId}/graph`);
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function loadSuggestions(useAi) {
+		suggestionsLoading = true;
+		try {
+			const q = useAi ? '?use_ai=true' : '';
+			suggestions = await get(`/admin/topics/${topicId}/graph/suggestions${q}`);
+			if (!expandedSubtopic && suggestions?.subtopics?.length) {
+				expandedSubtopic = suggestions.subtopics[0].id;
+			}
+		} catch (err) {
+			pushToast('Suggestions unavailable', err.message, 'error');
+		} finally {
+			suggestionsLoading = false;
 		}
 	}
 
@@ -256,8 +279,111 @@
 		}
 	}
 
+	function suggestionNodePayload(n) {
+		return {
+			title: n.title,
+			learning_objective: n.learning_objective,
+			difficulty_tag: n.difficulty_tag,
+			bloom_level: n.bloom_level,
+			estimated_duration_mins: n.estimated_duration_mins,
+			is_root: n.is_root
+		};
+	}
+
+	async function applyNodes(nodes, { withEdges = false } = {}) {
+		const missing = nodes.filter((n) => !n.already_added);
+		if (!missing.length) {
+			pushToast('Already on graph', 'Those concepts are already present', 'info');
+			return;
+		}
+		applying = true;
+		try {
+			const edges =
+				withEdges && suggestions?.edges
+					? suggestions.edges.map((e) => ({
+							from_title: e.from_title,
+							to_title: e.to_title,
+							type: e.type
+						}))
+					: [];
+			const res = await post(`/admin/topics/${topicId}/graph/apply-suggestions`, {
+				nodes: missing.map(suggestionNodePayload),
+				edges
+			});
+			pushToast(
+				'Suggestions applied',
+				`${res.created_count} concept${res.created_count === 1 ? '' : 's'} added` +
+					(res.edges_created ? ` · ${res.edges_created} links` : '')
+			);
+			await load();
+			await loadSuggestions(false);
+			validation = null;
+			if (res.created_node_ids?.[0]) focusNodeId = res.created_node_ids[0];
+		} catch (err) {
+			pushToast('Apply failed', err.message, 'error');
+		} finally {
+			applying = false;
+		}
+	}
+
+	async function applyOne(node) {
+		await applyNodes([node], { withEdges: true });
+	}
+
+	async function applySubtopic(subtopic) {
+		await applyNodes(subtopic.nodes, { withEdges: true });
+	}
+
+	async function applyAllMissing() {
+		if (!suggestions) return;
+		const all = suggestions.subtopics.flatMap((s) => s.nodes);
+		await applyNodes(all, { withEdges: true });
+	}
+
+	async function resetGraph() {
+		if (!graph?.nodes?.length) {
+			pushToast('Graph empty', 'Nothing to reset', 'info');
+			return;
+		}
+		const ok = confirm(
+			`Reset the entire "${graph.topic_name}" knowledge graph?\n\nThis deletes all concepts, prerequisites, diagnostic questions, and cached lessons for this topic. Learner roadmaps for the topic are cleared.`
+		);
+		if (!ok) return;
+		const typed = prompt('Type RESET to confirm');
+		if (typed !== 'RESET') {
+			pushToast('Reset cancelled', '', 'info');
+			return;
+		}
+		resetting = true;
+		try {
+			const res = await post(`/admin/topics/${topicId}/graph/reset`, { confirm: true });
+			pushToast(
+				'Graph reset',
+				`${res.deleted_nodes} concepts removed` +
+					(res.goals_reset ? ` · ${res.goals_reset} learner goals cleared` : '')
+			);
+			clearSelection();
+			validation = null;
+			await load();
+			await loadSuggestions(false);
+		} catch (err) {
+			pushToast('Reset failed', err.message, 'error');
+		} finally {
+			resetting = false;
+		}
+	}
+
 	let selectedEdge = $derived(
 		selectedEdgeId && graph ? graph.edges.find((e) => e.id === selectedEdgeId) : null
+	);
+
+	let missingSuggestionCount = $derived(
+		suggestions?.stats?.missing_nodes ??
+			suggestions?.subtopics?.reduce(
+				(n, s) => n + s.nodes.filter((x) => !x.already_added).length,
+				0
+			) ??
+			0
 	);
 
 	function nodeClass(node) {
@@ -303,8 +429,14 @@
 				placeholder="Find concept..."
 				bind:value={search}
 			/>
+			<button class="btn" class:active={showSuggestions} onclick={() => (showSuggestions = !showSuggestions)}>
+				{showSuggestions ? 'Hide suggestions' : 'Suggestions'}
+			</button>
 			<button class="btn" disabled={validating} onclick={runValidate}>
 				{validating ? 'Checking...' : 'Validate DAG'}
+			</button>
+			<button class="btn danger-outline" disabled={resetting || !graph.nodes.length} onclick={resetGraph}>
+				{resetting ? 'Resetting...' : 'Reset graph'}
 			</button>
 			<button class="btn" class:active={linkMode} onclick={toggleLinkMode}>
 				{linkMode ? 'Cancel linking' : 'Link prerequisites'}
@@ -393,8 +525,13 @@
 				</GraphCanvas>
 			{:else}
 				<div class="empty-canvas card">
-					<p>No concepts yet. Add a concept to start building this topic's graph.</p>
-					<button class="btn btn-primary" onclick={startNew}>Add concept</button>
+					<p>No concepts yet. Start from suggested subtopics, or add a concept manually.</p>
+					<div class="empty-actions">
+						<button class="btn btn-primary" onclick={() => (showSuggestions = true)}>
+							Browse suggestions
+						</button>
+						<button class="btn" onclick={startNew}>Add concept</button>
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -404,20 +541,142 @@
 				<h2>Edit graph</h2>
 				<p class="muted help">
 					Click a concept to edit it. Click an edge to change its type or remove it. Use
-					<strong>Link prerequisites</strong> to connect concepts on the canvas. Scroll to zoom,
-					drag the background to pan.
+					<strong>Link prerequisites</strong> to connect concepts. Scroll to zoom, drag the
+					background to pan.
 				</p>
+
+				{#if showSuggestions}
+					<section class="suggest-block">
+						<div class="suggest-head">
+							<h3>Suggested subtopics</h3>
+							{#if suggestions}
+								<span class="tag tag-dim">{suggestions.source}</span>
+							{/if}
+						</div>
+						{#if suggestionsLoading}
+							<p class="faint">Loading suggestions...</p>
+						{:else if suggestions}
+							<p class="muted suggest-meta">
+								{missingSuggestionCount} concept{missingSuggestionCount === 1 ? '' : 's'} still
+								suggested · {suggestions.stats?.present_nodes ?? 0} already on the map
+							</p>
+							<div class="suggest-actions">
+								<button
+									class="btn btn-sm btn-primary"
+									disabled={applying || missingSuggestionCount === 0}
+									onclick={applyAllMissing}
+								>
+									{applying ? 'Adding...' : 'Add all missing'}
+								</button>
+								<button
+									class="btn btn-sm"
+									disabled={suggestionsLoading || !suggestions.ai_available}
+									onclick={() => loadSuggestions(true)}
+									title={suggestions.ai_available
+										? 'Regenerate with AI'
+										: 'Set OPENROUTER_API_KEY to enable AI suggestions'}
+								>
+									{suggestions.ai_available ? 'Suggest with AI' : 'AI unavailable'}
+								</button>
+								<button class="btn btn-sm" disabled={suggestionsLoading} onclick={() => loadSuggestions(false)}>
+									Refresh
+								</button>
+							</div>
+
+							<div class="subtopic-list">
+								{#each suggestions.subtopics as st (st.id)}
+									{@const missing = st.nodes.filter((n) => !n.already_added).length}
+									<div class="subtopic" class:open={expandedSubtopic === st.id}>
+										<button
+											class="subtopic-toggle"
+											onclick={() =>
+												(expandedSubtopic = expandedSubtopic === st.id ? null : st.id)}
+										>
+											<span class="st-name">{st.name}</span>
+											<span class="faint"
+												>{missing}/{st.nodes.length} left</span
+											>
+										</button>
+										{#if expandedSubtopic === st.id}
+											{#if st.description}
+												<p class="st-desc">{st.description}</p>
+											{/if}
+											<button
+												class="btn btn-sm add-sub"
+												disabled={applying || missing === 0}
+												onclick={() => applySubtopic(st)}
+											>
+												Add subtopic ({missing})
+											</button>
+											<ul class="suggest-nodes">
+												{#each st.nodes as n (n.suggestion_key)}
+													<li class:added={n.already_added}>
+														<div class="sn-main">
+															<span class="sn-title">{n.title}</span>
+															<span class="sn-meta"
+																>{n.difficulty_tag} · {n.estimated_duration_mins} min
+																{#if n.is_root}· root{/if}</span
+															>
+														</div>
+														{#if n.already_added}
+															<span class="tag tag-up">Added</span>
+														{:else}
+															<button
+																class="btn btn-sm"
+																disabled={applying}
+																onclick={() => applyOne(n)}
+															>
+																Add
+															</button>
+														{/if}
+													</li>
+												{/each}
+											</ul>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						{/if}
+					</section>
+				{/if}
+
 				<ul class="tips">
 					<li>Required edges are solid; recommended edges are dashed.</li>
 					<li>Root concepts are entry points with no hard prerequisites.</li>
 					<li>Validate DAG checks orphans, unreachable nodes, and cycles.</li>
-					<li>Knowledge graph runtime is free in-process (optional Apache AGE when self-hosting).</li>
+					<li>Reset graph clears concepts and related diagnostic/lesson cache for this topic.</li>
 				</ul>
 			{:else if panelMode === 'new' || panelMode === 'node'}
 				<div class="panel-head">
 					<h2>{panelMode === 'new' ? 'New concept' : 'Edit concept'}</h2>
 					<button class="btn btn-xs" onclick={clearSelection}>Close</button>
 				</div>
+
+				{#if panelMode === 'new' && suggestions && missingSuggestionCount > 0}
+					<div class="quick-suggest">
+						<span class="label">Fill from suggestion</span>
+						<div class="quick-chips">
+							{#each suggestions.subtopics.flatMap((s) => s.nodes).filter((n) => !n.already_added).slice(0, 8) as n (n.suggestion_key)}
+								<button
+									type="button"
+									class="chip"
+									onclick={() => {
+										nodeForm = {
+											title: n.title,
+											learning_objective: n.learning_objective,
+											difficulty_tag: n.difficulty_tag,
+											bloom_level: n.bloom_level,
+											estimated_duration_mins: n.estimated_duration_mins,
+											is_root: n.is_root
+										};
+									}}
+								>
+									{n.title}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
 				<label class="label" for="n-title">Title</label>
 				<input id="n-title" class="input" bind:value={nodeForm.title} />
@@ -747,6 +1006,12 @@
 		justify-content: center;
 	}
 
+	.empty-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
 	.side-panel {
 		position: sticky;
 		top: 16px;
@@ -835,6 +1100,134 @@
 	}
 
 	.arrow {
+		color: var(--text-faint);
+	}
+
+	.danger-outline {
+		color: var(--danger);
+		border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+	}
+
+	.danger-outline:hover:not(:disabled) {
+		border-color: var(--danger);
+		background: var(--danger-soft);
+	}
+
+	.suggest-block {
+		margin: 4px 0 16px;
+		padding-top: 4px;
+		border-top: 1px solid var(--border);
+	}
+
+	.suggest-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		margin: 12px 0 6px;
+	}
+
+	.suggest-head h3 {
+		margin: 0;
+		font-size: 0.95rem;
+	}
+
+	.suggest-meta {
+		font-size: 12.5px;
+		margin: 0 0 10px;
+	}
+
+	.suggest-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin-bottom: 12px;
+	}
+
+	.subtopic-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.subtopic {
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-elevated);
+		overflow: hidden;
+	}
+
+	.subtopic-toggle {
+		width: 100%;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 8px;
+		padding: 10px 12px;
+		border: none;
+		background: transparent;
+		color: var(--text);
+		cursor: pointer;
+		text-align: left;
+		font-weight: 650;
+		font-size: 13.5px;
+	}
+
+	.st-name {
+		flex: 1;
+	}
+
+	.st-desc {
+		margin: 0;
+		padding: 0 12px 8px;
+		font-size: 12.5px;
+		color: var(--text-dim);
+		line-height: 1.4;
+	}
+
+	.add-sub {
+		margin: 0 12px 8px;
+	}
+
+	.suggest-nodes {
+		list-style: none;
+		margin: 0;
+		padding: 0 8px 8px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.suggest-nodes li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 8px 8px;
+		border-radius: 6px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+	}
+
+	.suggest-nodes li.added {
+		opacity: 0.72;
+	}
+
+	.sn-main {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+	}
+
+	.sn-title {
+		font-size: 13px;
+		font-weight: 600;
+		line-height: 1.25;
+	}
+
+	.sn-meta {
+		font-size: 11px;
 		color: var(--text-faint);
 	}
 </style>

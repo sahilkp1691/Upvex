@@ -12,6 +12,8 @@ from ..models import (
     Category,
     ConceptEdge,
     ConceptNode,
+    ConceptVisit,
+    DiagnosticQuestion,
     GeneratedContent,
     GenerationContract,
     LessonCompletion,
@@ -159,6 +161,175 @@ async def validate_graph(topic_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(404, "Topic not found")
     kg = await load_topic_graph(db, topic_id)
     return kg.validate()
+
+
+@router.get("/topics/{topic_id}/graph/suggestions")
+async def graph_suggestions(
+    topic_id: str,
+    use_ai: bool = False,
+    db: AsyncSession = Depends(get_db),
+):
+    """Suggested subtopics + concept nodes for building this topic's graph."""
+    from ..services import graph_suggestions as suggestions
+
+    topic = await db.get(Topic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "Topic not found")
+    return await suggestions.build_suggestions(db, topic, use_ai=use_ai)
+
+
+class SuggestedNodePayload(BaseModel):
+    title: str
+    learning_objective: str
+    difficulty_tag: str = Field(default="beginner", pattern="^(beginner|intermediate|advanced)$")
+    bloom_level: str = Field(default="understand", pattern="^(remember|understand|apply|analyse)$")
+    estimated_duration_mins: int = Field(default=10, ge=1, le=180)
+    is_root: bool = False
+
+
+class SuggestedEdgePayload(BaseModel):
+    from_title: str
+    to_title: str
+    type: str = Field(default="required", pattern="^(required|recommended)$")
+
+
+class ApplySuggestionsPayload(BaseModel):
+    nodes: list[SuggestedNodePayload] = Field(default_factory=list)
+    edges: list[SuggestedEdgePayload] = Field(default_factory=list)
+    # When true, also create suggested edges whose endpoints exist after node apply
+    include_catalog_edges: bool = False
+
+
+@router.post("/topics/{topic_id}/graph/apply-suggestions")
+async def apply_suggestions(
+    topic_id: str,
+    payload: ApplySuggestionsPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """Add suggested concept nodes (skipping title duplicates) and optional edges."""
+    topic = await db.get(Topic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "Topic not found")
+
+    existing = (
+        await db.execute(select(ConceptNode).where(ConceptNode.topic_id == topic_id))
+    ).scalars().all()
+    by_title = {n.title.strip().lower(): n for n in existing}
+
+    created_ids: list[str] = []
+    skipped: list[str] = []
+    for item in payload.nodes:
+        key = item.title.strip().lower()
+        if not key:
+            continue
+        if key in by_title:
+            skipped.append(item.title)
+            continue
+        node = ConceptNode(topic_id=topic_id, **item.model_dump())
+        db.add(node)
+        await db.flush()
+        by_title[key] = node
+        created_ids.append(node.id)
+
+    edges_created = 0
+    edges_skipped = 0
+    for e in payload.edges:
+        frm = by_title.get(e.from_title.strip().lower())
+        to = by_title.get(e.to_title.strip().lower())
+        if not frm or not to:
+            edges_skipped += 1
+            continue
+        if frm.id == to.id:
+            edges_skipped += 1
+            continue
+        # Skip if edge already exists
+        existing_edge = (
+            await db.execute(
+                select(ConceptEdge).where(
+                    ConceptEdge.topic_id == topic_id,
+                    ConceptEdge.from_concept_id == frm.id,
+                    ConceptEdge.to_concept_id == to.id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing_edge:
+            edges_skipped += 1
+            continue
+        if await _would_create_cycle(db, topic_id, frm.id, to.id):
+            edges_skipped += 1
+            continue
+        db.add(
+            ConceptEdge(
+                topic_id=topic_id,
+                from_concept_id=frm.id,
+                to_concept_id=to.id,
+                edge_type=e.type,
+            )
+        )
+        edges_created += 1
+
+    await db.commit()
+    return {
+        "created_node_ids": created_ids,
+        "created_count": len(created_ids),
+        "skipped_titles": skipped,
+        "edges_created": edges_created,
+        "edges_skipped": edges_skipped,
+    }
+
+
+class GraphResetPayload(BaseModel):
+    confirm: bool = False
+
+
+@router.post("/topics/{topic_id}/graph/reset")
+async def reset_graph(
+    topic_id: str,
+    payload: GraphResetPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete all concept nodes/edges for a topic (and dependent content)."""
+    if not payload.confirm:
+        raise HTTPException(400, "Pass confirm=true to reset this topic's knowledge graph")
+
+    topic = await db.get(Topic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "Topic not found")
+
+    node_ids = list(
+        (
+            await db.execute(select(ConceptNode.id).where(ConceptNode.topic_id == topic_id))
+        ).scalars().all()
+    )
+    if not node_ids:
+        return {"ok": True, "deleted_nodes": 0, "deleted_edges": 0}
+
+    # Dependent rows that FK to concept_nodes / topic
+    await db.execute(delete(LessonCompletion).where(LessonCompletion.concept_node_id.in_(node_ids)))
+    await db.execute(delete(ConceptVisit).where(ConceptVisit.concept_node_id.in_(node_ids)))
+    await db.execute(delete(GeneratedContent).where(GeneratedContent.topic_id == topic_id))
+    await db.execute(delete(DiagnosticQuestion).where(DiagnosticQuestion.topic_id == topic_id))
+    edge_result = await db.execute(delete(ConceptEdge).where(ConceptEdge.topic_id == topic_id))
+    node_result = await db.execute(delete(ConceptNode).where(ConceptNode.topic_id == topic_id))
+
+    # Clear learner roadmap state for this topic so stale concept ids disappear
+    goals = (
+        await db.execute(select(UserGoal).where(UserGoal.topic_id == topic_id))
+    ).scalars().all()
+    for goal in goals:
+        goal.concept_gap_map = {}
+        goal.root_gap_concepts = []
+        goal.completed_concepts = []
+        goal.level_score = None
+        goal.status = "diagnostic_pending"
+
+    await db.commit()
+    return {
+        "ok": True,
+        "deleted_nodes": node_result.rowcount or len(node_ids),
+        "deleted_edges": edge_result.rowcount or 0,
+        "goals_reset": len(goals),
+    }
 
 
 @router.post("/topics/{topic_id}/nodes")
