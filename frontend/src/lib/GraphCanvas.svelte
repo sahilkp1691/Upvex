@@ -125,18 +125,29 @@
 		ty = my - ((my - ty) / before) * scale;
 	}
 
+	function isInteractiveTarget(target) {
+		if (!(target instanceof Element)) return false;
+		return Boolean(
+			target.closest(
+				'button, a, input, textarea, select, label, [role="button"], [data-no-pan], .ctrl'
+			)
+		);
+	}
+
 	function onPointerDown(e) {
 		if (e.button !== 0 && e.button !== 1) return;
 		const target = e.target;
+		// Middle-click, Space+drag, or left-drag on empty canvas (not nodes/controls)
 		const allow =
 			e.button === 1 ||
 			spaceDown ||
-			(target instanceof Element && target.closest('[data-graph-pan]'));
+			(e.button === 0 && !isInteractiveTarget(target));
 		if (!allow) return;
 		panning = true;
 		lastX = e.clientX;
 		lastY = e.clientY;
 		viewport?.setPointerCapture(e.pointerId);
+		e.preventDefault();
 	}
 
 	function onPointerMove(e) {
@@ -288,14 +299,15 @@
 			var(--bg-elevated);
 		min-height: 420px;
 		height: min(62vh, 640px);
-		cursor: default;
+		cursor: grab;
 		touch-action: none;
 		position: relative;
+		user-select: none;
 	}
 
 	.viewport.space,
 	.viewport.panning {
-		cursor: grab;
+		cursor: grabbing;
 	}
 
 	.viewport.panning {
@@ -321,5 +333,12 @@
 		z-index: 1;
 		width: 100%;
 		height: 100%;
+	}
+
+	.world :global(.graph-content button),
+	.world :global(.graph-content a),
+	.world :global(.graph-content [role='button']) {
+		cursor: pointer;
+		user-select: none;
 	}
 </style>
