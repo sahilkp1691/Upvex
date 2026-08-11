@@ -858,8 +858,8 @@
 	}
 
 	:global(.admin-canvas .viewport) {
-		min-height: 480px;
-		height: min(68vh, 720px);
+		min-height: 560px;
+		height: min(80vh, 900px);
 	}
 
 	.validation-banner {

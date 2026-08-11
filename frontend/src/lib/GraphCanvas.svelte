@@ -297,8 +297,8 @@
 		background:
 			radial-gradient(circle, var(--border) 1px, transparent 1px) 0 0 / 26px 26px,
 			var(--bg-elevated);
-		min-height: 420px;
-		height: min(62vh, 640px);
+		min-height: 520px;
+		height: min(78vh, 860px);
 		cursor: grab;
 		touch-action: none;
 		position: relative;
