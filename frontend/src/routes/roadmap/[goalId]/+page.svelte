@@ -72,8 +72,14 @@
 	});
 
 	let focus = $derived.by(() => {
-		if (!layout || !nextNode) return null;
-		const p = layout.pos[nextNode.id];
+		if (!layout) return null;
+		const target =
+			nextNode ??
+			roadmap?.nodes?.find((n) => n.state === 'available') ??
+			roadmap?.nodes?.[0] ??
+			null;
+		if (!target) return null;
+		const p = layout.pos[target.id];
 		if (!p) return null;
 		return { x: p.x, y: p.y, w: NODE_W, h: NODE_H };
 	});

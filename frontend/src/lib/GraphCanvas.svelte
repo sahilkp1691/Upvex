@@ -2,14 +2,22 @@
 	/**
 	 * Pan / zoom viewport for knowledge-graph canvases.
 	 * Content should be absolutely positioned inside the inner layer at graph coords.
+	 *
+	 * Default framing: when `focusFirst` is true and a focus rect is provided, zoom
+	 * around that node at a readable scale. "Fit" still shows the full graph.
 	 */
 	let {
 		width = 800,
 		height = 600,
 		minScale = 0.35,
 		maxScale = 2.2,
-		/** Optional { x, y, w, h } in graph space to center on after mount / change */
+		/** Optional { x, y, w, h } in graph space to center on */
 		focus = null,
+		/** Prefer framing around focus on first paint (learner roadmap) */
+		focusFirst = false,
+		/** Comfortable initial zoom band when focusing a node */
+		focusScaleMin = 0.9,
+		focusScaleMax = 1.15,
 		class: className = '',
 		children
 	} = $props();
@@ -24,35 +32,70 @@
 
 	let lastX = 0;
 	let lastY = 0;
-	let fittedOnce = false;
+	let framedOnce = false;
 	let lastFocusKey = '';
 
 	$effect(() => {
 		if (!viewport || !width || !height) return;
-		if (!fittedOnce) {
-			fit();
-			fittedOnce = true;
+		if (framedOnce) return;
+
+		if (focusFirst) {
+			if (focus) {
+				frameAroundFocus(focus);
+				lastFocusKey = focusKey(focus);
+				framedOnce = true;
+			}
+			// Wait until focus (e.g. recommended_next) is ready
+			return;
 		}
+
+		fit();
+		framedOnce = true;
 	});
 
 	$effect(() => {
-		if (!focus || !viewport) return;
-		const key = `${focus.x},${focus.y},${focus.w ?? 0},${focus.h ?? 0}`;
+		if (!focus || !viewport || !framedOnce) return;
+		const key = focusKey(focus);
 		if (key === lastFocusKey) return;
 		lastFocusKey = key;
 		centerOn(focus.x, focus.y, focus.w ?? 0, focus.h ?? 0);
 	});
 
+	function focusKey(f) {
+		return `${f.x},${f.y},${f.w ?? 0},${f.h ?? 0}`;
+	}
+
+	/** Full-graph fit — used by the Fit control. */
 	function fit() {
 		if (!viewport) return;
-		const pad = 48;
+		const pad = 36;
 		const vw = viewport.clientWidth;
 		const vh = viewport.clientHeight;
 		const sx = (vw - pad * 2) / Math.max(width, 1);
 		const sy = (vh - pad * 2) / Math.max(height, 1);
-		scale = Math.min(maxScale, Math.max(minScale, Math.min(sx, sy, 1)));
+		// Allow zooming in when the graph is smaller than the viewport
+		scale = clampScale(Math.min(sx, sy));
 		tx = (vw - width * scale) / 2;
 		ty = (vh - height * scale) / 2;
+	}
+
+	/**
+	 * Zoom so ~3 nodes wide / ~3 layers tall fill the view, centered on focus.
+	 * Keeps a readable scale instead of shrinking the whole DAG into the canvas.
+	 */
+	function frameAroundFocus(f) {
+		if (!viewport) return;
+		const vw = viewport.clientWidth;
+		const vh = viewport.clientHeight;
+		const nodeW = Math.max(f.w ?? 230, 1);
+		const nodeH = Math.max(f.h ?? 96, 1);
+		const targetW = nodeW * 3.4;
+		const targetH = nodeH * 3.6;
+		const sx = (vw - 48) / targetW;
+		const sy = (vh - 48) / targetH;
+		const ideal = Math.min(sx, sy);
+		scale = clampScale(Math.min(Math.max(ideal, focusScaleMin), focusScaleMax));
+		centerOn(f.x, f.y, f.w ?? 0, f.h ?? 0);
 	}
 
 	function centerOn(x, y, w = 0, h = 0) {
@@ -78,14 +121,12 @@
 		const before = scale;
 		const delta = e.deltaY > 0 ? 0.9 : 1.1;
 		scale = clampScale(before * delta);
-		// Zoom toward cursor
 		tx = mx - ((mx - tx) / before) * scale;
 		ty = my - ((my - ty) / before) * scale;
 	}
 
 	function onPointerDown(e) {
 		if (e.button !== 0 && e.button !== 1) return;
-		// Pan with middle button, space+drag, or drag on empty canvas (data-pan)
 		const target = e.target;
 		const allow =
 			e.button === 1 ||
@@ -157,7 +198,7 @@
 <div class="graph-shell {className}">
 	<div class="controls" aria-label="Graph controls">
 		<button type="button" class="ctrl" title="Zoom out" onclick={() => zoomBy(1 / 1.15)}>−</button>
-		<button type="button" class="ctrl" title="Fit to view" onclick={fit}>Fit</button>
+		<button type="button" class="ctrl" title="Fit entire graph" onclick={fit}>Fit</button>
 		<button type="button" class="ctrl" title="Zoom in" onclick={() => zoomBy(1.15)}>+</button>
 		<span class="pct">{Math.round(scale * 100)}%</span>
 	</div>
