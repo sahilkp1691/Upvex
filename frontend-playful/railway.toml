@@ -1,10 +1,11 @@
 [build]
 builder = "RAILPACK"
-watchPatterns = ["frontend-playful/**"]
+buildCommand = "npm ci && npm run build"
+watchPatterns = ["**"]
 
 [deploy]
-startCommand = "node build"
-# SvelteKit serves the app at / — do not use the API /health path.
+# Bind all interfaces so Railway's proxy can reach the process
+startCommand = "HOST=0.0.0.0 node build/index.js"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
