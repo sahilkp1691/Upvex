@@ -1,0 +1,8 @@
+# Ignore local junk; keep Dockerfile lean
+node_modules
+.svelte-kit
+build
+.env
+.env.*
+!.env.example
+.DS_Store

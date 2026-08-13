@@ -1,11 +1,11 @@
 [build]
-builder = "RAILPACK"
-buildCommand = "npm ci && npm run build"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 watchPatterns = ["**"]
 
 [deploy]
-# Bind all interfaces so Railway's proxy can reach the process
-startCommand = "HOST=0.0.0.0 node build/index.js"
+# PORT is injected by Railway; HOST must be all interfaces
+startCommand = "node build/index.js"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
