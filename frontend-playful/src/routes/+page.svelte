@@ -110,8 +110,8 @@
 		width: min(420px, 70vw);
 		height: min(420px, 70vw);
 		border-radius: 45% 55% 60% 40% / 50% 45% 55% 50%;
-		background: var(--gold);
-		opacity: 0.55;
+		background: var(--gold-bright);
+		opacity: 0.35;
 		top: -120px;
 		right: -80px;
 		pointer-events: none;
@@ -189,7 +189,7 @@
 	}
 
 	.section.alt {
-		background: color-mix(in srgb, var(--gold) 14%, var(--bg));
+		background: color-mix(in srgb, var(--gold) 7%, var(--bg));
 		border-top: 3px solid var(--ink);
 		border-bottom: 3px solid var(--ink);
 	}
@@ -233,7 +233,8 @@
 		width: 28px;
 		height: 28px;
 		border-radius: 50%;
-		background: var(--gold);
+		background: var(--gold-bright);
+		color: var(--gold-fg);
 		border: 2px solid var(--ink);
 		font-weight: 700;
 		font-size: 13px;

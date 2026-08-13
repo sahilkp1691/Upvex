@@ -195,8 +195,8 @@
 	}
 
 	nav a.active {
-		color: var(--text);
-		background: var(--gold);
+		color: var(--gold-fg);
+		background: var(--gold-bright);
 		border-color: var(--ink);
 	}
 

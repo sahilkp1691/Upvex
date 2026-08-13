@@ -1,4 +1,4 @@
-/* Upvex Playful skin — cream light default, dark brown night */
+/* Upvex Playful skin — cream light, charcoal night (gold stays for rewards only) */
 
 :root,
 [data-theme='light'] {
@@ -24,10 +24,12 @@
 	--warn-soft: rgba(255, 122, 69, 0.16);
 	--danger: #e04545;
 	--danger-soft: rgba(224, 69, 69, 0.14);
-	--gold: #ffd23f;
-	--gold-soft: rgba(255, 210, 63, 0.28);
+	--gold: #9a7400;
+	--gold-bright: #e8c84a;
+	--gold-soft: rgba(154, 116, 0, 0.14);
+	--gold-fg: #2c2410;
 
-	--mesh-a: rgba(255, 210, 63, 0.35);
+	--mesh-a: rgba(154, 116, 0, 0.12);
 	--mesh-b: rgba(69, 196, 106, 0.12);
 	--mesh-c: rgba(255, 122, 69, 0.1);
 	--shadow: 3px 3px 0 #2c2410;
@@ -43,37 +45,42 @@
 }
 
 [data-theme='dark'] {
-	--bg: #1a1610;
-	--bg-elevated: #241f16;
-	--bg-card: #2c261c;
-	--bg-hover: #3a3224;
-	--border: #ffd23f;
-	--border-strong: #ffd23f;
+	/* Charcoal with a whisper of warmth — not yellow-brown */
+	--bg: #131311;
+	--bg-elevated: #1c1c18;
+	--bg-card: #24241f;
+	--bg-hover: #2e2e28;
+	/* Parchment strokes instead of neon gold outlines */
+	--border: #6e6a5c;
+	--border-strong: #a39e8c;
 
-	--text: #fff3de;
-	--text-dim: #d4c4a0;
-	--text-faint: #9a8a68;
+	--text: #f2efe6;
+	--text-dim: #b0aa98;
+	--text-faint: #7a7568;
 
 	--accent: #45c46a;
 	--accent-bright: #5fd67e;
 	--accent-soft: rgba(69, 196, 106, 0.2);
-	--accent-fg: #1a1610;
+	--accent-fg: #0e120e;
 
 	--up: #45c46a;
 	--up-soft: rgba(69, 196, 106, 0.18);
-	--warn: #ff7a45;
-	--warn-soft: rgba(255, 122, 69, 0.2);
+	--warn: #ff8a5c;
+	--warn-soft: rgba(255, 138, 92, 0.18);
 	--danger: #ff6b6b;
 	--danger-soft: rgba(255, 107, 107, 0.16);
-	--gold: #ffd23f;
-	--gold-soft: rgba(255, 210, 63, 0.18);
+	/* Gold: bright for fills, softer for glow — text uses --gold from light or this */
+	--gold: #e6c84a;
+	--gold-bright: #e6c84a;
+	--gold-soft: rgba(230, 200, 74, 0.12);
+	--gold-fg: #1a1808;
 
-	--mesh-a: rgba(255, 210, 63, 0.12);
-	--mesh-b: rgba(69, 196, 106, 0.1);
-	--mesh-c: rgba(255, 122, 69, 0.08);
-	--shadow: 3px 3px 0 #0a0805;
-	--pre-bg: #14110c;
-	--ink: #ffd23f;
+	--mesh-a: rgba(230, 200, 74, 0.05);
+	--mesh-b: rgba(69, 196, 106, 0.07);
+	--mesh-c: rgba(255, 138, 92, 0.04);
+	--shadow: 3px 3px 0 #050505;
+	--pre-bg: #0e0e0c;
+	--ink: #d8d2c0;
 	--play-border: 2.5px solid var(--ink);
 }
 
@@ -350,8 +357,8 @@ textarea.input {
 }
 
 .hud-chip.xp {
-	background: var(--gold);
-	color: var(--text);
+	background: var(--gold-bright);
+	color: var(--gold-fg);
 }
 
 .hud-chip.level {

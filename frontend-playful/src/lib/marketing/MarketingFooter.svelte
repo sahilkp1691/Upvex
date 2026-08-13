@@ -41,7 +41,7 @@
 	.mfoot {
 		border-top: 3px solid var(--ink);
 		padding: 36px clamp(20px, 4vw, 48px) 28px;
-		background: color-mix(in srgb, var(--gold) 18%, var(--bg));
+		background: color-mix(in srgb, var(--gold) 8%, var(--bg));
 	}
 
 	.mfoot-top {

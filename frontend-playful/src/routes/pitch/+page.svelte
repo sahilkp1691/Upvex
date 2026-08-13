@@ -114,7 +114,8 @@
 		display: inline-flex;
 		padding: 5px 12px;
 		border-radius: 999px;
-		background: var(--gold);
+		background: var(--gold-bright);
+		color: var(--gold-fg);
 		border: 2.5px solid var(--ink);
 		font-weight: 700;
 		font-size: 12px;
