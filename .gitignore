@@ -8,11 +8,18 @@ __pycache__/
 node_modules/
 frontend/.svelte-kit/
 frontend/build/
+frontend/.vite/
+frontend-playful/.svelte-kit/
+frontend-playful/build/
+frontend-soft/.svelte-kit/
+frontend-soft/build/
 
 # Env / secrets
 .env
 backend/.env
 frontend/.env
+frontend-playful/.env
+frontend-soft/.env
 
 # Local databases / artifacts
 *.db

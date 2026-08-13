@@ -1,8 +1,12 @@
 # Deprecated for the API service — use /backend/railway.toml instead.
 #
-# Railway monorepo:
-#   API service:      Root Directory=/backend, Config File=/backend/railway.toml
-#   Frontend service: Root Directory=/frontend, Config File=/frontend/railway.toml
+# Railway monorepo (one backend, two competing frontends):
+#   API service:           Root Directory=/backend,           Config File=/backend/railway.toml
+#   Playful web service:   Root Directory=/frontend-playful, Config File=/frontend-playful/railway.toml
+#   Soft web service:      Root Directory=/frontend-soft,    Config File=/frontend-soft/railway.toml
+#
+# Both frontends use the same VITE_API_URL. Set CORS_ORIGINS on the API to both demo URLs.
+# Promote a winner by attaching the production domain to that service and stopping the other.
 #
 # If this root file is still selected as Config File with Root Directory=/backend,
 # startCommand "sh ./start.sh" correctly resolves to backend/start.sh.
