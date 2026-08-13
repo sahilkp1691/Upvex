@@ -40,7 +40,7 @@
 	const audience = [
 		{
 			label: 'Teams & companies',
-			body: 'Per-employee diagnostic and admin graph authoring for engineering & data upskilling.',
+			body: 'Per-employee diagnostic and admin graph authoring today; upload your own materials for us to curate into a course tomorrow.',
 			href: '/solutions#teams'
 		},
 		{
@@ -62,7 +62,7 @@
 		},
 		{
 			label: 'Teams & companies',
-			body: 'Seat-based licensing plus admin tools to author your own knowledge graph.'
+			body: 'Seat-based licensing plus admin tools to author your own knowledge graph, or hand us your materials to curate.'
 		},
 		{
 			label: 'Schools & nonprofits',
@@ -81,7 +81,11 @@
 		},
 		{
 			label: 'Later',
-			body: 'LMS integrations and any technical subject represented on one shared prerequisite graph.'
+			body: 'LMS integrations, plus letting businesses upload their own materials \u2014 playbooks, docs, decks \u2014 for Upvex to curate into a structured, diagnosable course.'
+		},
+		{
+			label: 'Vision',
+			body: 'Any subject, not just technical skills, represented on one shared prerequisite graph.'
 		}
 	];
 </script>
@@ -109,7 +113,7 @@
 			<p class="tagline">Skills on an upward vector.</p>
 			<div class="meta-row">
 				<span class="meta-chip">Status: early development</span>
-				<span class="meta-chip">Focus: adaptive technical skill learning</span>
+				<span class="meta-chip">Focus: adaptive skill learning, any subject over time</span>
 			</div>
 		</section>
 
@@ -156,7 +160,10 @@
 				</div>
 				<div class="mini-card">
 					<h3>Knowledge graph</h3>
-					<p>Concepts and prerequisites, walked upstream to find the real root gap.</p>
+					<p>
+						Concepts and prerequisites, walked upstream to find the real root gap &mdash; built to
+						extend past technical skills to any subject.
+					</p>
 				</div>
 				<div class="mini-card">
 					<h3>Generated lessons</h3>

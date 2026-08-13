@@ -7,11 +7,12 @@
 			id: 'teams',
 			eyebrow: 'For teams & companies',
 			title: 'Close skill gaps before they become incidents.',
-			body: 'Engineering and data teams usually get the same fixed onboarding course whether they are a new hire or a five-year senior. Upvex diagnoses each person against your actual stack — starting with SQL and Spark — and gives them a personal roadmap, while admins see exactly where the team is weak and can author the graph themselves.',
+			body: 'Engineering and data teams usually get the same fixed onboarding course whether they are a new hire or a five-year senior. Upvex diagnoses each person against your actual stack — starting with SQL and Spark — and gives them a personal roadmap, while admins see exactly where the team is weak and can author the graph themselves, or hand us their own materials to curate.',
 			bullets: [
 				'Per-employee diagnostic instead of a generic onboarding course',
 				'Root-gap visibility for managers, not just pass/fail scores',
 				'Admin tools to author and adjust the knowledge graph for your stack',
+				'Upload your own docs, playbooks, and decks — we curate a structured course from them',
 				'Progress, streaks, and completion tracked per learner',
 				'Deploy against real production skills — SQL, Spark, more coming'
 			],
