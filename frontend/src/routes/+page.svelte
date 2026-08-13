@@ -621,7 +621,10 @@
 		padding: 20px 18px;
 		background: var(--bg-elevated);
 		border: 1px solid var(--border);
-		transform: translateY(calc(52px - var(--i) * 22px));
+		overflow: hidden;
+		/* Standalone `translate` (not `transform`) so the staircase offset survives
+		   the reveal system setting `transform: none` on `.is-in`. */
+		translate: 0 calc(52px - var(--i) * 22px);
 	}
 
 	.ghost-num {
@@ -937,7 +940,7 @@
 		}
 
 		.step {
-			transform: none;
+			translate: none;
 		}
 
 		.pillar-grid,

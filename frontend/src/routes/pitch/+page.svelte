@@ -100,6 +100,7 @@
 </svelte:head>
 
 <div class="mkt pitch">
+	<div class="grain" aria-hidden="true"></div>
 	<MarketingNav />
 
 	<div class="counter" aria-hidden="true">
@@ -252,9 +253,21 @@
 	}
 
 	.pitch {
+		position: relative;
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
+	}
+
+	.grain {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		opacity: 0.05;
+		mix-blend-mode: overlay;
+		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+		background-size: 180px 180px;
 	}
 
 	:global(.mkt [data-reveal]) {
@@ -314,6 +327,7 @@
 
 	.slide {
 		position: relative;
+		z-index: 1;
 		max-width: 900px;
 		margin: 0 auto;
 		padding: clamp(64px, 12vw, 128px) clamp(20px, 4vw, 48px);
@@ -367,7 +381,9 @@
 		padding: 2px 20px 10px;
 		background: var(--sig);
 		color: var(--bg);
-		transform: rotate(-1deg);
+		/* Standalone `rotate` (not `transform`) so the stamp tilt survives the
+		   reveal system setting `transform: none` on `.is-in`. */
+		rotate: -1deg;
 	}
 
 	.tagline {

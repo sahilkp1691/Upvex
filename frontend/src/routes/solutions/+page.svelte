@@ -64,6 +64,7 @@
 </svelte:head>
 
 <div class="mkt solutions">
+	<div class="grain" aria-hidden="true"></div>
 	<MarketingNav />
 
 	<section class="hero">
@@ -128,9 +129,27 @@
 	}
 
 	.solutions {
+		position: relative;
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
+	}
+
+	.grain {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		opacity: 0.05;
+		mix-blend-mode: overlay;
+		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+		background-size: 180px 180px;
+	}
+
+	.hero,
+	.pricing-note {
+		position: relative;
+		z-index: 1;
 	}
 
 	:global(.mkt [data-reveal]) {
@@ -246,6 +265,7 @@
 
 	.use-section {
 		position: relative;
+		z-index: 1;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
 		gap: 48px;
