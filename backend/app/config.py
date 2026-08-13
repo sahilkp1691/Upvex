@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     app_env: str = "development"  # development | production
     api_host: str = "127.0.0.1"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174"
 
     # Database — Supabase Postgres in prod/dev-with-keys, local Postgres otherwise
     database_url: str = "postgresql+asyncpg://upvex:upvex@localhost:5432/upvex"

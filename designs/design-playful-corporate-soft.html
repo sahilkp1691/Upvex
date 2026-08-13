@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upvex — Playful softened for corporate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #e8eaee; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #12151a; }
+  .page { max-width: 1280px; margin: 0 auto; padding: 36px 20px 100px; }
+  .head { margin-bottom: 24px; }
+  .head .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7a8496; margin-bottom: 8px; }
+  .head h1 { font-size: 24px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .head p { font-size: 14px; color: #545e6e; line-height: 1.55; max-width: 70ch; margin: 0; }
+
+  .note {
+    background: #fff; border: 1px solid #d8dde6; border-radius: 10px; padding: 12px 16px;
+    font-size: 13px; color: #3a4456; line-height: 1.5; margin-bottom: 28px;
+  }
+  .note strong { color: #12151a; }
+
+  .section { margin-bottom: 36px; }
+  .section-title { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+  .section-title h2 { font-size: 14px; font-weight: 700; margin: 0; }
+  .section-title .sub { font-size: 12.5px; color: #6a7488; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+  .cols.wide { grid-template-columns: 1.05fr 0.95fr; }
+
+  .card { background: #fff; border: 1px solid #d8dde6; border-radius: 12px; overflow: hidden; }
+  .label {
+    padding: 8px 14px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    border-bottom: 1px solid #e4e7eb; display: flex; justify-content: space-between; color: #5a6478;
+  }
+  .label .full { color: #d6551e; }
+  .label .soft { color: #2f7a4a; }
+  .frame { height: 480px; overflow: hidden; position: relative; }
+  .frame.short { height: 360px; }
+  .frame.tall { height: 540px; }
+
+  /* ===== FULL PLAYFUL (learner reference) ===== */
+  .full {
+    font-family: 'Fredoka', sans-serif; background: #fff3de; color: #2c2410; height: 100%; position: relative;
+  }
+  .full .blob {
+    position: absolute; width: 180px; height: 180px;
+    border-radius: 45% 55% 60% 40% / 50% 45% 55% 50%;
+    background: #ffd23f; top: -50px; right: -40px; opacity: 0.7; pointer-events: none;
+  }
+  .full .top {
+    display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+    border-bottom: 3px solid #2c2410; position: relative; z-index: 1;
+  }
+  .full .mark { font-weight: 700; font-size: 14px; }
+  .full .chip {
+    border: 2px solid #2c2410; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 700;
+  }
+  .full .chip.s { background: #ff7a45; color: #fff; }
+  .full .chip.x { background: #ffd23f; }
+  .full .body { padding: 16px; position: relative; z-index: 1; }
+  .full h3 { font-size: 20px; font-weight: 700; margin: 0 0 6px; }
+  .full .muted { font-size: 12.5px; color: #4a3f22; margin: 0 0 14px; line-height: 1.45; }
+  .full .btn {
+    display: inline-flex; background: #45c46a; color: #fff; padding: 10px 16px; border-radius: 12px;
+    font-size: 13px; font-weight: 700; border: 2.5px solid #2c2410; box-shadow: 3px 3px 0 #2c2410;
+  }
+  .full .panel {
+    background: #fff; border: 2.5px solid #2c2410; border-radius: 14px; padding: 12px;
+    box-shadow: 2px 2px 0 #2c2410; margin-bottom: 8px;
+  }
+  .full .panel .t { font-size: 13px; font-weight: 700; }
+  .full .panel .m { font-size: 11px; color: #4a3f22; margin-top: 2px; }
+  .full .tag {
+    display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 999px; border: 2px solid #2c2410; background: #45c46a; color: #fff;
+  }
+
+  /* ===== SOFTENED CORPORATE PLAYFUL ===== */
+  .soft {
+    font-family: 'Work Sans', sans-serif; background: #faf6ef; color: #1f1a12; height: 100%;
+  }
+  .soft .top {
+    display: flex; justify-content: space-between; align-items: center; padding: 12px 18px;
+    border-bottom: 1px solid #e4d9c4; background: rgba(255,255,255,0.7);
+  }
+  .soft .mark {
+    font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: -0.01em;
+  }
+  .soft .nav { display: flex; gap: 18px; font-size: 12.5px; font-weight: 500; color: #5a5240; }
+  .soft .nav .cta {
+    background: #2f7a4a; color: #fff; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 12px;
+  }
+  .soft .body { padding: 20px 18px; }
+  .soft .eyebrow {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: #c45a2a; margin-bottom: 8px;
+  }
+  .soft h3 {
+    font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; line-height: 1.15;
+  }
+  .soft .muted { font-size: 13px; color: #5a5240; margin: 0 0 16px; line-height: 1.5; max-width: 42ch; }
+  .soft .btn {
+    display: inline-flex; align-items: center; background: #2f7a4a; color: #fff; padding: 10px 16px;
+    border-radius: 8px; font-size: 13px; font-weight: 600; border: none;
+  }
+  .soft .btn-ghost {
+    display: inline-flex; background: transparent; color: #1f1a12; padding: 9px 14px;
+    border-radius: 8px; font-size: 13px; font-weight: 600; border: 1.5px solid #cfc3a8;
+  }
+  .soft .btn-row { display: flex; gap: 8px; align-items: center; }
+  .soft .accent-line { width: 28px; height: 3px; background: #e8a317; border-radius: 2px; margin-bottom: 12px; }
+
+  /* soft cards — rounded but no offset shadow / thick comic border */
+  .soft .panel {
+    background: #fff; border: 1px solid #e4d9c4; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .soft .panel .t { font-size: 13px; font-weight: 600; }
+  .soft .panel .m { font-size: 11.5px; color: #6a6250; margin-top: 2px; }
+  .soft .tag {
+    display: inline-block; margin-top: 8px; font-size: 10.5px; font-weight: 600; padding: 3px 8px;
+    border-radius: 6px; background: #e8f5ec; color: #2f7a4a;
+  }
+  .soft .tag.warn { background: #fdebe4; color: #c45a2a; }
+  .soft .tag.neutral { background: #f3eee3; color: #5a5240; }
+
+  .soft .stats { display: flex; gap: 10px; margin-top: 16px; }
+  .soft .stat {
+    flex: 1; background: #fff; border: 1px solid #e4d9c4; border-radius: 10px; padding: 10px 12px;
+  }
+  .soft .stat .n {
+    font-family: 'Fredoka', sans-serif; font-size: 20px; font-weight: 600; color: #2f7a4a;
+  }
+  .soft .stat .l { font-size: 11px; color: #6a6250; margin-top: 2px; }
+
+  /* soft stepper */
+  .soft .steps { display: flex; gap: 6px; margin-bottom: 14px; }
+  .soft .steps span {
+    flex: 1; text-align: center; font-size: 10.5px; font-weight: 600; padding: 7px 4px;
+    border-radius: 8px; background: #f3eee3; color: #6a6250;
+  }
+  .soft .steps .done { background: #e8f5ec; color: #2f7a4a; }
+  .soft .steps .now { background: #2f7a4a; color: #fff; }
+
+  .soft .drop {
+    border: 1.5px dashed #cfc3a8; background: #fff; border-radius: 10px; padding: 22px 14px;
+    text-align: center; margin-bottom: 10px;
+  }
+  .soft .drop .big { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .soft .drop .sm { font-size: 11.5px; color: #6a6250; }
+
+  .soft .file {
+    display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e4d9c4;
+    border-radius: 8px; padding: 9px 12px; margin-bottom: 6px; font-size: 12.5px;
+  }
+  .soft .file .ico {
+    width: 28px; height: 28px; border-radius: 6px; background: #fdebe4; color: #c45a2a;
+    display: grid; place-items: center; font-size: 9px; font-weight: 700; flex-shrink: 0;
+  }
+  .soft .file .ico.ppt { background: #fff4d6; color: #9a6b00; }
+  .soft .file .ico.doc { background: #e8f5ec; color: #2f7a4a; }
+
+  .soft .aside-layout { display: grid; grid-template-columns: 148px 1fr; height: 100%; }
+  .soft .aside {
+    border-right: 1px solid #e4d9c4; background: #f3eee3; padding: 14px 10px;
+  }
+  .soft .aside .logo {
+    font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 14px; padding: 0 6px;
+  }
+  .soft .aside a {
+    display: block; font-size: 12px; font-weight: 500; padding: 7px 8px; border-radius: 7px;
+    color: #5a5240; margin-bottom: 2px;
+  }
+  .soft .aside a.on { background: #fff; color: #1f1a12; font-weight: 600; box-shadow: 0 0 0 1px #e4d9c4; }
+  .soft .admin-main { padding: 14px; }
+  .soft table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .soft th {
+    text-align: left; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase;
+    color: #6a6250; padding: 0 8px 8px; border-bottom: 1px solid #e4d9c4; font-weight: 600;
+  }
+  .soft td { padding: 10px 8px; border-bottom: 1px solid #efe8da; }
+  .soft .pill {
+    display: inline-block; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px;
+  }
+  .soft .pill.ok { background: #e8f5ec; color: #2f7a4a; }
+  .soft .pill.warn { background: #fdebe4; color: #c45a2a; }
+
+  /* soft landing hero */
+  .soft-hero { height: 100%; display: flex; flex-direction: column; }
+  .soft-hero .hero-body {
+    flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 28px 24px;
+    background:
+      radial-gradient(ellipse 40% 50% at 90% 10%, rgba(232,163,23,0.18), transparent 70%),
+      radial-gradient(ellipse 35% 40% at 100% 80%, rgba(47,122,74,0.1), transparent 70%),
+      #faf6ef;
+  }
+  .soft-hero .proof {
+    display: flex; gap: 16px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e4d9c4;
+  }
+  .soft-hero .proof div { font-size: 11.5px; color: #6a6250; }
+  .soft-hero .proof strong {
+    display: block; font-family: 'Fredoka', sans-serif; font-size: 16px; font-weight: 600; color: #1f1a12; margin-bottom: 1px;
+  }
+
+  /* full landing for contrast */
+  .full-hero { height: 100%; position: relative; overflow: hidden; }
+  .full-hero .inner { position: relative; z-index: 1; padding: 28px 22px; }
+  .full-hero .streak {
+    display: inline-flex; background: #ff7a45; color: #fff; font-weight: 700; font-size: 11px;
+    padding: 4px 10px; border-radius: 999px; border: 2px solid #2c2410; margin-bottom: 12px;
+  }
+  .full-hero h1 { font-size: 28px; font-weight: 700; margin: 0 0 10px; line-height: 1.1; max-width: 12ch; }
+  .full-hero p { font-size: 13px; color: #4a3f22; margin: 0 0 16px; max-width: 28ch; line-height: 1.45; }
+
+  .diff {
+    background: #fff; border: 1px solid #d8dde6; border-radius: 12px; padding: 16px 18px; margin-top: 8px;
+  }
+  .diff h2 { font-size: 14px; margin: 0 0 10px; }
+  .diff table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .diff td, .diff th { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef0f4; vertical-align: top; }
+  .diff th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6a7488; }
+  .diff td:first-child { font-weight: 600; width: 28%; color: #12151a; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="head">
+      <div class="kicker">Upvex · Playful (7) · corporate soft mode</div>
+      <h1>Same brand DNA — dialed down for buyers &amp; admins</h1>
+      <p>
+        Left = full Playful (what employees see). Right = softened corporate surface
+        (solutions, pitch, admin, material upload). Warm cream, green, orange stay —
+        thick comic borders, blobs, and offset shadows go away.
+      </p>
+    </div>
+
+    <div class="note">
+      <strong>Corporate message this chrome supports:</strong>
+      “Training people finish — personal paths from your materials, with a daily loop that doesn’t feel like another LMS.”
+      Fun is the delivery system; competence is the outcome.
+    </div>
+
+    <!-- 1 LANDING / SOLUTIONS -->
+    <div class="section">
+      <div class="section-title">
+        <h2>01 — Company landing / solutions hero</h2>
+        <span class="sub">How you show up to L&amp;D / HR buyers</span>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <div class="label"><span class="full">Full Playful · learner</span><span>Reference</span></div>
+          <div class="frame short">
+            <div class="full full-hero">
+              <div class="blob"></div>
+              <div class="top">
+                <span class="mark">Upvex</span>
+                <div style="display:flex;gap:8px"><span class="chip s">4 day</span><span class="chip x">1.2k</span></div>
+              </div>
+              <div class="inner">
+                <span class="streak">4-day streak</span>
+                <h1>Skills on an upward vector.</h1>
+                <p>Diagnose the gap, get the lesson, keep climbing.</p>
+                <span class="btn">Start learning</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="label"><span class="soft">Softened · corporate</span><span>Solutions</span></div>
+          <div class="frame short">
+            <div class="soft soft-hero">
+              <div class="top">
+                <span class="mark">Upvex</span>
+                <div class="nav">
+                  <span>Solutions</span>
+                  <span>Pitch</span>
+                  <span class="cta">Talk to us</span>
+                </div>
+              </div>
+              <div class="hero-body">
+                <div class="eyebrow">For teams &amp; companies</div>
+                <div class="accent-line"></div>
+                <h3>Training people actually finish.</h3>
+                <p class="muted">
+                  Diagnose each employee against your stack or your own materials.
+                  Short personal lessons — sticky enough that completion stops being the hard part.
+                </p>
+                <div class="btn-row">
+                  <span class="btn">Book a walkthrough</span>
+                  <span class="btn-ghost">See how it works</span>
+                </div>
+                <div class="proof">
+                  <div><strong>Personal path</strong>per employee, not one deck</div>
+                  <div><strong>Your materials</strong>curated into a graph</div>
+                  <div><strong>Daily loop</strong>people come back to</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 TEAM DASHBOARD -->
+    <div class="section">
+      <div class="section-title">
+        <h2>02 — Manager / L&amp;D dashboard</h2>
+        <span class="sub">Serious scan of team progress — warmth without toys</span>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <div class="label"><span class="full">Full Playful</span><span>Learner hub vibe</span></div>
+          <div class="frame">
+            <div class="full">
+              <div class="blob"></div>
+              <div class="top">
+                <span class="mark">Upvex</span>
+                <div style="display:flex;gap:6px"><span class="chip s">4 day</span><span class="chip x">Lv 4</span></div>
+              </div>
+              <div class="body">
+                <h3>Pick your next climb</h3>
+                <p class="muted">Keep the streak going.</p>
+                <div class="panel"><div class="t">Modern Spanish</div><div class="m">Language · 48 concepts</div><span class="tag">in progress</span></div>
+                <div class="panel"><div class="t">First Aid L2</div><div class="m">Health · 22 concepts</div><span class="tag">in progress</span></div>
+                <div class="panel"><div class="t">Manager Coaching</div><div class="m">Soft skills · 31 concepts</div><span class="tag" style="background:#ffd23f;color:#2c2410">new</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="label"><span class="soft">Softened · corporate</span><span>Team overview</span></div>
+          <div class="frame">
+            <div class="soft">
+              <div class="top">
+                <span class="mark">Upvex · Acme</span>
+                <div class="nav"><span>Team</span><span>Materials</span><span>Settings</span></div>
+              </div>
+              <div class="body">
+                <div class="eyebrow">Engineering onboarding</div>
+                <h3>Team progress</h3>
+                <p class="muted">42 active learners · average path completion this month</p>
+                <div class="stats">
+                  <div class="stat"><div class="n">68%</div><div class="l">avg completion</div></div>
+                  <div class="stat"><div class="n">3.2</div><div class="l">sessions / week</div></div>
+                  <div class="stat"><div class="n">11</div><div class="l">root gaps closed</div></div>
+                </div>
+                <div style="margin-top:14px">
+                  <div class="panel">
+                    <div class="t">SQL Window Functions</div>
+                    <div class="m">28 enrolled · common root gap: PARTITION BY</div>
+                    <span class="tag">on track</span>
+                  </div>
+                  <div class="panel">
+                    <div class="t">Acme New-Hire Ramp</div>
+                    <div class="m">From your materials · 18 concepts</div>
+                    <span class="tag warn">3 need review</span>
+                  </div>
+                  <div class="panel">
+                    <div class="t">GDPR Essentials</div>
+                    <div class="m">Compliance · due end of quarter</div>
+                    <span class="tag neutral">scheduled</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 MATERIALS UPLOAD -->
+    <div class="section">
+      <div class="section-title">
+        <h2>03 — Corporate material input</h2>
+        <span class="sub">Upload playbooks → curated course — still warm, not comic</span>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <div class="label"><span class="full">Full Playful</span><span>Thick borders / pills</span></div>
+          <div class="frame tall">
+            <div class="full">
+              <div class="top">
+                <span class="mark">Acme Corp</span>
+                <span class="btn" style="padding:6px 12px;font-size:12px">Curate</span>
+              </div>
+              <div class="body">
+                <div style="display:flex;gap:6px;margin-bottom:12px">
+                  <span class="chip" style="background:#45c46a;color:#fff">Upload</span>
+                  <span class="chip s">Map</span>
+                  <span class="chip">Graph</span>
+                  <span class="chip">Publish</span>
+                </div>
+                <div class="panel" style="text-align:center;padding:20px;border-style:dashed">
+                  <div class="t">Drop your company materials</div>
+                  <div class="m">Playbooks, decks, FAQs</div>
+                </div>
+                <div class="panel" style="display:flex;gap:8px;align-items:center">
+                  <span style="width:24px;height:24px;background:#ff7a45;color:#fff;border-radius:8px;border:2px solid #2c2410;display:grid;place-items:center;font-size:9px;font-weight:700">PDF</span>
+                  <div><div class="t">Onboarding_Playbook_v4.pdf</div><div class="m">12 pages</div></div>
+                </div>
+                <div class="panel" style="display:flex;gap:8px;align-items:center">
+                  <span style="width:24px;height:24px;background:#ffd23f;color:#2c2410;border-radius:8px;border:2px solid #2c2410;display:grid;place-items:center;font-size:9px;font-weight:700">PPT</span>
+                  <div><div class="t">Sales_Ramp_Q3.pptx</div><div class="m">34 slides</div></div>
+                </div>
+                <div class="panel">
+                  <div class="t">Acme New-Hire Ramp</div>
+                  <div class="m">18 concepts · 3 likely root gaps</div>
+                  <span class="tag">ready to map</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="label"><span class="soft">Softened · corporate</span><span>Materials</span></div>
+          <div class="frame tall">
+            <div class="soft">
+              <div class="top">
+                <span class="mark">Acme · Materials</span>
+                <span class="btn" style="padding:6px 12px;font-size:12px">Curate course</span>
+              </div>
+              <div class="body">
+                <div class="steps">
+                  <span class="done">Upload</span>
+                  <span class="now">Map</span>
+                  <span>Graph</span>
+                  <span>Publish</span>
+                </div>
+                <div class="eyebrow">Source files</div>
+                <div class="drop">
+                  <div class="big">Drop PDFs, decks, or playbooks</div>
+                  <div class="sm">We extract concepts and propose a prerequisite graph your team can edit</div>
+                </div>
+                <div class="file"><span class="ico">PDF</span> Onboarding_Playbook_v4.pdf <span style="margin-left:auto;font-size:11px;color:#6a6250">12 pages</span></div>
+                <div class="file"><span class="ico ppt">PPT</span> Sales_Ramp_Q3.pptx <span style="margin-left:auto;font-size:11px;color:#6a6250">34 slides</span></div>
+                <div class="file"><span class="ico doc">DOC</span> Compliance_FAQ.docx <span style="margin-left:auto;font-size:11px;color:#6a6250">8 pages</span></div>
+                <div class="panel" style="margin-top:10px">
+                  <div class="t">Proposed topic · Acme New-Hire Ramp</div>
+                  <div class="m">18 concepts detected · employees start with a diagnostic against this graph</div>
+                  <span class="tag">ready to map</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 ADMIN -->
+    <div class="section">
+      <div class="section-title">
+        <h2>04 — Admin catalog</h2>
+        <span class="sub">Ops-facing — Fredoka only on wordmark, Work Sans everywhere else</span>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <div class="label"><span class="full">Full Playful</span><span>Rounded table rows</span></div>
+          <div class="frame">
+            <div class="full" style="display:grid;grid-template-columns:130px 1fr;height:100%">
+              <div style="border-right:3px solid #2c2410;background:#ffe8b8;padding:12px 10px">
+                <div style="font-weight:700;font-size:13px;margin-bottom:12px">Upvex Admin</div>
+                <div style="background:#2c2410;color:#fff;padding:7px 9px;border-radius:10px;font-size:12px;font-weight:600;margin-bottom:4px">Topics</div>
+                <div style="padding:7px 9px;font-size:12px;font-weight:600">Materials</div>
+                <div style="padding:7px 9px;font-size:12px;font-weight:600">Contracts</div>
+              </div>
+              <div style="padding:12px">
+                <h3 style="font-size:16px;margin-bottom:10px">Topics</h3>
+                <div class="panel"><div class="t">Modern Spanish</div><div class="m">Language</div><span class="tag">ready</span></div>
+                <div class="panel"><div class="t">Manager Coaching</div><div class="m">Soft skills</div><span class="tag" style="background:#ff7a45">6/8</span></div>
+                <div class="panel"><div class="t">Acme New-Hire Ramp</div><div class="m">Corporate</div><span class="tag" style="background:#ffd23f;color:#2c2410">graph</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="label"><span class="soft">Softened · corporate</span><span>Admin</span></div>
+          <div class="frame">
+            <div class="soft" style="height:100%">
+              <div class="aside-layout">
+                <div class="aside">
+                  <div class="logo">Upvex Admin</div>
+                  <a class="on">Topics</a>
+                  <a>Graphs</a>
+                  <a>Materials</a>
+                  <a>Contracts</a>
+                </div>
+                <div class="admin-main">
+                  <div class="eyebrow">Catalog</div>
+                  <h3 style="font-size:18px;margin-bottom:12px">Topics</h3>
+                  <table>
+                    <thead><tr><th>Topic</th><th>Domain</th><th>Status</th></tr></thead>
+                    <tbody>
+                      <tr><td>Modern Spanish</td><td>Language</td><td><span class="pill ok">ready</span></td></tr>
+                      <tr><td>Manager Coaching</td><td>Soft skills</td><td><span class="pill warn">6/8 diag</span></td></tr>
+                      <tr><td>Acme New-Hire Ramp</td><td>Corporate</td><td><span class="pill ok">mapped</span></td></tr>
+                      <tr><td>GDPR Essentials</td><td>Compliance</td><td><span class="pill ok">ready</span></td></tr>
+                      <tr><td>SQL Windows</td><td>Data</td><td><span class="pill ok">ready</span></td></tr>
+                    </tbody>
+                  </table>
+                  <div style="margin-top:14px"><span class="btn-ghost">+ New topic</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="diff">
+      <h2>What changes in soft mode</h2>
+      <table>
+        <thead><tr><th></th><th>Full Playful (employees)</th><th>Softened (corporate / admin)</th></tr></thead>
+        <tbody>
+          <tr><td>Borders</td><td>Thick black + offset shadow</td><td>1px warm grey hairlines</td></tr>
+          <tr><td>Shapes</td><td>Blobs, heavy pills</td><td>Soft gradients, quiet radius</td></tr>
+          <tr><td>Type</td><td>Fredoka everywhere</td><td>Fredoka for brand + titles only; Work Sans for UI</td></tr>
+          <tr><td>Color</td><td>Loud green / orange fills</td><td>Same palette, mostly as soft tint chips</td></tr>
+          <tr><td>Copy</td><td>Streak, climb, claim XP</td><td>Completion, personal path, your materials</td></tr>
+          <tr><td>Promise</td><td>Fun to open every day</td><td>People finish — because it’s not boring</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1005 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upvex — Deep dive: Bauhaus vs Playful</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Jost:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #e6e8ed; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #12151a; }
+  .page { max-width: 1320px; margin: 0 auto; padding: 36px 20px 100px; }
+
+  .head { margin-bottom: 28px; }
+  .head .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7a8496; margin-bottom: 8px; }
+  .head h1 { font-size: 26px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .head p { font-size: 14px; color: #545e6e; line-height: 1.55; max-width: 72ch; margin: 0; }
+
+  .legend {
+    display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 28px;
+  }
+  .legend span {
+    font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 6px; background: #fff; border: 1px solid #d5dae3; color: #3a4456;
+  }
+
+  .section { margin-bottom: 40px; }
+  .section-title {
+    display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
+  }
+  .section-title h2 { font-size: 15px; font-weight: 700; margin: 0; }
+  .section-title .note { font-size: 12.5px; color: #6a7488; }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 980px) { .cols { grid-template-columns: 1fr; } }
+
+  .col-card {
+    background: #fff;
+    border: 1px solid #d8dde6;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .col-label {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid #e4e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .col-label .tag-b { color: #2451c4; }
+  .col-label .tag-p { color: #d6551e; }
+  .frame { height: 520px; position: relative; overflow: hidden; }
+  .frame.tall { height: 580px; }
+  .frame.short { height: 420px; }
+
+  /* ========== SHARED APP PIECES ========== */
+  .shell { height: 100%; display: flex; flex-direction: column; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; flex-shrink: 0; }
+  .body { flex: 1; padding: 14px; overflow: hidden; }
+  .chips { display: flex; gap: 6px; align-items: center; }
+
+  /* ========== BAUHAUS THEME ========== */
+  .b { font-family: 'Jost', sans-serif; background: #fbf7ee; color: #161311; height: 100%; }
+  .b .topbar { border-bottom: 2px solid #161311; }
+  .b .mark { font-weight: 600; font-size: 13px; }
+  .b .navlinks { display: flex; gap: 14px; font-size: 11.5px; font-weight: 500; color: #4a443d; }
+  .b .chip-r { width: 26px; height: 26px; border-radius: 50%; background: #d6482f; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+  .b .chip-b { width: 26px; height: 26px; background: #2451c4; color: #fff; display: grid; place-items: center; font-size: 9px; font-weight: 700; }
+  .b .chip-y { width: 26px; height: 26px; background: #e8b41b; color: #161311; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+  .b h3 { font-size: 18px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .b .muted { font-size: 12px; color: #6a6358; margin: 0 0 14px; line-height: 1.45; }
+  .b .eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #2451c4; margin-bottom: 6px; }
+  .b .btn { display: inline-flex; align-items: center; justify-content: center; background: #161311; color: #fbf7ee; padding: 9px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .b .btn-blue { background: #2451c4; }
+  .b .btn-ghost { background: transparent; color: #161311; border: 2px solid #161311; }
+  .b .card { border: 2px solid #161311; background: #fff; padding: 12px; }
+  .b .shape-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #d6482f; margin-right: 5px; vertical-align: middle; }
+  .b .shape-sq { display: inline-block; width: 8px; height: 8px; background: #e8b41b; margin-right: 5px; vertical-align: middle; }
+  .b .shape-tr {
+    display: inline-block; width: 0; height: 0; margin-right: 5px; vertical-align: middle;
+    border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid #2451c4;
+  }
+
+  /* Bauhaus topic grid */
+  .b .topics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .b .topic {
+    border: 2px solid #161311; background: #fff; padding: 10px; position: relative; overflow: hidden; min-height: 92px;
+  }
+  .b .topic .glyph { position: absolute; right: -6px; bottom: -10px; opacity: 0.18; }
+  .b .topic .t-name { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .b .topic .t-meta { font-size: 10.5px; color: #6a6358; }
+  .b .topic .t-tag {
+    display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 2px 6px; margin-top: 8px;
+  }
+  .b .topic .tag-gap { background: #d6482f; color: #fff; }
+  .b .topic .tag-root { background: #2451c4; color: #fff; }
+  .b .topic .tag-lesson { background: #e8b41b; color: #161311; }
+  .b .topic .tag-new { border: 1.5px solid #161311; }
+
+  /* Bauhaus diagnostic */
+  .b .q-title { font-size: 14.5px; font-weight: 600; line-height: 1.3; margin: 0 0 10px; }
+  .b .opts { display: flex; flex-direction: column; gap: 7px; }
+  .b .opt { border: 2px solid #161311; padding: 9px 10px; font-size: 12px; display: flex; gap: 8px; align-items: center; background: #fff; }
+  .b .opt.on { background: #161311; color: #fbf7ee; }
+  .b .opt .s { width: 12px; height: 12px; flex-shrink: 0; }
+  .b .opt .s.sq { background: #e8b41b; }
+  .b .opt .s.ci { background: #d6482f; border-radius: 50%; }
+  .b .opt .s.tr { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 11px solid #2451c4; background: transparent; }
+
+  /* Bauhaus roadmap */
+  .b .graph { position: relative; height: 280px; border: 2px solid #161311; background: #fff; margin-top: 8px; }
+  .b .node {
+    position: absolute; border: 2px solid #161311; background: #fbf7ee; padding: 6px 10px; font-size: 10.5px; font-weight: 600; text-align: center; min-width: 78px;
+  }
+  .b .node.done { background: #e8b41b; }
+  .b .node.now { background: #d6482f; color: #fff; }
+  .b .node.lock { opacity: 0.45; }
+  .b .edge { position: absolute; height: 2px; background: #161311; transform-origin: left center; }
+
+  /* Bauhaus lesson */
+  .b .lesson-head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+  .b .lesson-mark { width: 36px; height: 36px; background: #e8b41b; border: 2px solid #161311; flex-shrink: 0; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .b .lesson-body { font-size: 12.5px; line-height: 1.55; color: #3a342c; }
+  .b .callout { border-left: 4px solid #2451c4; padding: 8px 10px; background: #fff; margin: 10px 0; font-size: 12px; }
+  .b .check { display: flex; gap: 8px; margin-top: 12px; }
+  .b .check .box { width: 16px; height: 16px; border: 2px solid #161311; background: #d6482f; }
+
+  /* Bauhaus admin */
+  .b .admin-layout { display: grid; grid-template-columns: 140px 1fr; gap: 0; height: 100%; }
+  .b .aside { border-right: 2px solid #161311; padding: 12px 10px; background: #f3eee3; }
+  .b .aside .logo { font-weight: 700; font-size: 12px; margin-bottom: 14px; }
+  .b .aside a { display: block; font-size: 11.5px; padding: 6px 8px; margin-bottom: 2px; color: #4a443d; }
+  .b .aside a.on { background: #161311; color: #fbf7ee; }
+  .b .admin-main { padding: 12px; overflow: hidden; }
+  .b .table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .b .table th { text-align: left; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 2px solid #161311; padding: 6px 4px; }
+  .b .table td { border-bottom: 1px solid #d8d0c0; padding: 8px 4px; }
+  .b .pill { display: inline-block; font-size: 9.5px; font-weight: 700; padding: 2px 6px; }
+  .b .pill.ok { background: #e8b41b; }
+  .b .pill.warn { background: #d6482f; color: #fff; }
+  .b .pill.info { background: #2451c4; color: #fff; }
+
+  /* Bauhaus corporate upload */
+  .b .drop {
+    border: 2px dashed #161311; background: #fff; padding: 22px 14px; text-align: center; margin: 10px 0;
+  }
+  .b .drop .big { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .b .drop .sm { font-size: 11px; color: #6a6358; }
+  .b .file-row { display: flex; align-items: center; gap: 8px; border: 2px solid #161311; background: #fff; padding: 8px 10px; margin-bottom: 6px; font-size: 11.5px; }
+  .b .file-row .ico { width: 22px; height: 22px; background: #2451c4; color: #fff; display: grid; place-items: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+  .b .steps { display: flex; gap: 0; margin: 12px 0; }
+  .b .steps span {
+    flex: 1; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 7px 4px; border: 2px solid #161311; margin-left: -2px;
+  }
+  .b .steps span:first-child { margin-left: 0; }
+  .b .steps .done { background: #e8b41b; }
+  .b .steps .now { background: #d6482f; color: #fff; }
+  .b .steps .todo { background: #fff; color: #6a6358; }
+
+  /* ========== PLAYFUL THEME ========== */
+  .p { font-family: 'Fredoka', sans-serif; background: #fff3de; color: #2c2410; height: 100%; position: relative; }
+  .p .topbar { border-bottom: 3px solid #2c2410; position: relative; z-index: 1; }
+  .p .mark { font-weight: 700; font-size: 14px; }
+  .p .navlinks { display: flex; gap: 12px; font-size: 12px; font-weight: 600; }
+  .p .chip {
+    border: 2px solid #2c2410; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 700;
+  }
+  .p .chip.streak { background: #ff7a45; color: #fff; }
+  .p .chip.xp { background: #ffd23f; }
+  .p .chip.lvl { background: #fff; }
+  .p h3 { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+  .p .muted { font-size: 12px; color: #4a3f22; margin: 0 0 12px; line-height: 1.45; }
+  .p .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #45c46a; color: #fff; padding: 9px 14px; border-radius: 12px;
+    font-size: 12.5px; font-weight: 700; border: 2.5px solid #2c2410; box-shadow: 2px 2px 0 #2c2410;
+  }
+  .p .btn-orange { background: #ff7a45; }
+  .p .btn-yellow { background: #ffd23f; color: #2c2410; }
+  .p .btn-ghost { background: #fff; color: #2c2410; }
+  .p .blob {
+    position: absolute; width: 160px; height: 160px; border-radius: 45% 55% 60% 40% / 50% 45% 55% 50%;
+    background: #ffd23f; opacity: 0.55; top: -40px; right: -40px; z-index: 0; pointer-events: none;
+  }
+
+  .p .topics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; position: relative; z-index: 1; }
+  .p .topic {
+    background: #fff; border: 2.5px solid #2c2410; border-radius: 14px; padding: 10px;
+    box-shadow: 2px 2px 0 #2c2410; min-height: 92px;
+  }
+  .p .topic .t-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .p .topic .t-meta { font-size: 11px; color: #4a3f22; }
+  .p .topic .bar { display: flex; gap: 3px; margin-top: 10px; }
+  .p .topic .bar i { height: 6px; flex: 1; border-radius: 4px; background: #2c2410; opacity: 0.12; }
+  .p .topic .bar i.on { background: #45c46a; opacity: 1; }
+  .p .topic .t-tag {
+    display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    border: 2px solid #2c2410; margin-top: 8px;
+  }
+  .p .topic .tag-live { background: #45c46a; color: #fff; }
+  .p .topic .tag-new { background: #ffd23f; }
+
+  .p .q-title { font-size: 14.5px; font-weight: 700; line-height: 1.3; margin: 0 0 10px; position: relative; z-index: 1; }
+  .p .opts { display: flex; flex-direction: column; gap: 7px; position: relative; z-index: 1; }
+  .p .opt {
+    background: #fff; border: 2.5px solid #2c2410; border-radius: 12px; padding: 9px 11px;
+    font-size: 12.5px; font-weight: 500; box-shadow: 2px 2px 0 #2c2410;
+  }
+  .p .opt.on { background: #45c46a; color: #fff; }
+
+  .p .graph {
+    position: relative; height: 280px; background: #fff; border: 3px solid #2c2410; border-radius: 16px;
+    margin-top: 8px; box-shadow: 3px 3px 0 #2c2410;
+  }
+  .p .node {
+    position: absolute; border: 2.5px solid #2c2410; background: #fff; border-radius: 12px;
+    padding: 6px 10px; font-size: 10.5px; font-weight: 700; text-align: center; min-width: 78px;
+    box-shadow: 2px 2px 0 #2c2410;
+  }
+  .p .node.done { background: #45c46a; color: #fff; }
+  .p .node.now { background: #ff7a45; color: #fff; }
+  .p .node.lock { opacity: 0.4; }
+  .p .edge { position: absolute; height: 3px; background: #2c2410; transform-origin: left center; opacity: 0.35; }
+
+  .p .lesson-head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; position: relative; z-index: 1; }
+  .p .lesson-mark {
+    width: 38px; height: 38px; background: #ffd23f; border: 2.5px solid #2c2410; border-radius: 12px;
+    flex-shrink: 0; display: grid; place-items: center; font-weight: 700; font-size: 14px; box-shadow: 2px 2px 0 #2c2410;
+  }
+  .p .lesson-body { font-size: 12.5px; line-height: 1.55; color: #3a3220; position: relative; z-index: 1; }
+  .p .callout {
+    border: 2.5px solid #2c2410; border-radius: 12px; padding: 9px 11px; background: #fff; margin: 10px 0;
+    font-size: 12px; box-shadow: 2px 2px 0 #2c2410;
+  }
+  .p .check { display: flex; gap: 8px; margin-top: 12px; align-items: center; position: relative; z-index: 1; }
+  .p .check .box {
+    width: 18px; height: 18px; border: 2.5px solid #2c2410; border-radius: 6px; background: #45c46a;
+    box-shadow: 1px 1px 0 #2c2410;
+  }
+
+  .p .admin-layout { display: grid; grid-template-columns: 140px 1fr; height: 100%; }
+  .p .aside { border-right: 3px solid #2c2410; padding: 12px 10px; background: #ffe8b8; }
+  .p .aside .logo { font-weight: 700; font-size: 13px; margin-bottom: 12px; }
+  .p .aside a {
+    display: block; font-size: 12px; font-weight: 600; padding: 7px 9px; margin-bottom: 4px;
+    border-radius: 10px; color: #2c2410;
+  }
+  .p .aside a.on { background: #2c2410; color: #fff; }
+  .p .admin-main { padding: 12px; overflow: hidden; }
+  .p .table { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: 11.5px; }
+  .p .table th { text-align: left; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; padding: 0 8px 4px; color: #6a5a30; }
+  .p .table td {
+    background: #fff; border-top: 2px solid #2c2410; border-bottom: 2px solid #2c2410; padding: 8px;
+  }
+  .p .table td:first-child { border-left: 2px solid #2c2410; border-radius: 10px 0 0 10px; }
+  .p .table td:last-child { border-right: 2px solid #2c2410; border-radius: 0 10px 10px 0; }
+  .p .pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 2px solid #2c2410; }
+  .p .pill.ok { background: #45c46a; color: #fff; }
+  .p .pill.warn { background: #ff7a45; color: #fff; }
+  .p .pill.info { background: #ffd23f; }
+
+  .p .drop {
+    border: 3px dashed #2c2410; background: #fff; border-radius: 16px; padding: 20px 14px; text-align: center; margin: 10px 0;
+  }
+  .p .drop .big { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .p .drop .sm { font-size: 11px; color: #4a3f22; }
+  .p .file-row {
+    display: flex; align-items: center; gap: 8px; background: #fff; border: 2.5px solid #2c2410;
+    border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; font-size: 12px; font-weight: 500;
+    box-shadow: 2px 2px 0 #2c2410;
+  }
+  .p .file-row .ico {
+    width: 24px; height: 24px; background: #ff7a45; color: #fff; border-radius: 8px; border: 2px solid #2c2410;
+    display: grid; place-items: center; font-size: 9px; font-weight: 700; flex-shrink: 0;
+  }
+  .p .steps { display: flex; gap: 6px; margin: 12px 0; }
+  .p .steps span {
+    flex: 1; text-align: center; font-size: 10px; font-weight: 700; padding: 7px 4px;
+    border: 2.5px solid #2c2410; border-radius: 999px;
+  }
+  .p .steps .done { background: #45c46a; color: #fff; }
+  .p .steps .now { background: #ff7a45; color: #fff; }
+  .p .steps .todo { background: #fff; color: #6a5a30; }
+
+  /* Landing mini heroes at top */
+  .hero-pair .frame { height: 300px; }
+  .b-hero, .p-hero { height: 100%; position: relative; overflow: hidden; }
+  .b-hero { font-family: 'Jost', sans-serif; background: #fbf7ee; color: #161311; }
+  .b-hero .shapes { position: absolute; inset: 0; }
+  .b-hero .c { position: absolute; width: 120px; height: 120px; border-radius: 50%; background: #d6482f; top: 50px; right: -20px; }
+  .b-hero .s { position: absolute; width: 60px; height: 60px; background: #e8b41b; top: 30px; right: 130px; transform: rotate(8deg); }
+  .b-hero .t { position: absolute; width: 0; height: 0; border-left: 45px solid transparent; border-right: 45px solid transparent; border-bottom: 78px solid #2451c4; top: 150px; right: 70px; }
+  .b-hero .inner { position: relative; z-index: 1; padding: 28px 22px; max-width: 65%; }
+  .b-hero .ey { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #2451c4; margin-bottom: 8px; }
+  .b-hero h1 { font-size: 26px; font-weight: 600; margin: 0 0 8px; line-height: 1.1; }
+  .b-hero p { font-size: 12.5px; color: #4a443d; margin: 0 0 14px; line-height: 1.45; }
+  .b-hero .cta { display: inline-flex; background: #161311; color: #fbf7ee; padding: 9px 16px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+
+  .p-hero { font-family: 'Fredoka', sans-serif; background: #fff3de; color: #2c2410; }
+  .p-hero .blob { position: absolute; width: 180px; height: 180px; border-radius: 45% 55% 60% 40% / 50% 45% 55% 50%; background: #ffd23f; top: -50px; right: -40px; }
+  .p-hero .inner { position: relative; z-index: 1; padding: 28px 22px; }
+  .p-hero .streak { display: inline-flex; background: #ff7a45; color: #fff; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 2px solid #2c2410; margin-bottom: 10px; }
+  .p-hero h1 { font-size: 26px; font-weight: 700; margin: 0 0 8px; line-height: 1.1; max-width: 12ch; }
+  .p-hero p { font-size: 12.5px; color: #4a3f22; margin: 0 0 14px; line-height: 1.45; max-width: 28ch; }
+  .p-hero .cta { display: inline-flex; background: #45c46a; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; border: 2.5px solid #2c2410; box-shadow: 2px 2px 0 #2c2410; }
+
+  .verdict {
+    background: #fff; border: 1px solid #d8dde6; border-radius: 12px; padding: 18px 20px; margin-top: 8px;
+  }
+  .verdict h2 { font-size: 15px; margin: 0 0 10px; }
+  .verdict .vgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .verdict .vgrid { grid-template-columns: 1fr; } }
+  .verdict h3 { font-size: 13px; margin: 0 0 6px; }
+  .verdict ul { margin: 0; padding-left: 18px; font-size: 13px; color: #3a4456; line-height: 1.55; }
+  .verdict .pick {
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid #e4e7eb; font-size: 13.5px; color: #12151a;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="head">
+      <div class="kicker">Upvex &middot; deep dive</div>
+      <h1>3 Bauhaus vs 7 Playful — full product surface</h1>
+      <p>
+        Same screens, two design systems. Topics are intentionally not just tech
+        (history, languages, compliance, soft skills). Scroll through learner,
+        admin, and corporate material-upload flows, then pick one — or ask for a hybrid.
+      </p>
+    </div>
+
+    <div class="legend">
+      <span>Left = 3 Bauhaus Primary</span>
+      <span>Right = 7 Playful Momentum</span>
+      <span>Any-subject topics</span>
+      <span>Admin + corporate upload included</span>
+    </div>
+
+    <!-- HERO -->
+    <div class="section hero-pair">
+      <div class="section-title">
+        <h2>01 — Marketing hero</h2>
+        <span class="note">First impression of the brand</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Landing</span></div>
+          <div class="frame short">
+            <div class="b-hero">
+              <div class="shapes"><div class="c"></div><div class="s"></div><div class="t"></div></div>
+              <div class="inner">
+                <div class="ey">Form follows function</div>
+                <h1>Skills on an upward vector.</h1>
+                <p>Circle, triangle, square — gap, root, lesson. Any subject.</p>
+                <span class="cta">Start learning</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Landing</span></div>
+          <div class="frame short">
+            <div class="p-hero">
+              <div class="blob"></div>
+              <div class="inner">
+                <span class="streak">4-day streak</span>
+                <h1>Skills on an upward vector.</h1>
+                <p>Diagnose the gap, get the lesson, keep climbing.</p>
+                <span class="cta">Start learning</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOPIC HUB -->
+    <div class="section">
+      <div class="section-title">
+        <h2>02 — Topic hub (any subject)</h2>
+        <span class="note">SQL, Spanish, first-aid, manager coaching — same shell</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>App · Learn</span></div>
+          <div class="frame">
+            <div class="b shell">
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="chips"><span class="chip-r">4</span><span class="chip-b">XP</span><span class="chip-y">!</span></div>
+              </div>
+              <div class="body">
+                <div class="eyebrow">Your climbs</div>
+                <h3>Pick your next subject</h3>
+                <p class="muted">Any topic on one prerequisite graph — diagnose, then climb.</p>
+                <div class="topics">
+                  <div class="topic">
+                    <div class="t-name">Modern Spanish</div>
+                    <div class="t-meta">Language · 48 concepts</div>
+                    <span class="t-tag tag-gap">gap found</span>
+                    <div class="glyph"><div style="width:56px;height:56px;border-radius:50%;background:#d6482f"></div></div>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">First Aid L2</div>
+                    <div class="t-meta">Health · 22 concepts</div>
+                    <span class="t-tag tag-lesson">in lesson</span>
+                    <div class="glyph"><div style="width:48px;height:48px;background:#e8b41b;transform:rotate(12deg)"></div></div>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">Manager Coaching</div>
+                    <div class="t-meta">Soft skills · 31 concepts</div>
+                    <span class="t-tag tag-root">at root</span>
+                    <div class="glyph" style="border-left:28px solid transparent;border-right:28px solid transparent;border-bottom:48px solid #2451c4;width:0;height:0;right:4px;bottom:4px"></div>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">SQL Window Fn</div>
+                    <div class="t-meta">Data · 19 concepts</div>
+                    <span class="t-tag tag-new">new</span>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">WWII Causes</div>
+                    <div class="t-meta">History · 36 concepts</div>
+                    <span class="t-tag tag-new">new</span>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">GDPR Essentials</div>
+                    <div class="t-meta">Compliance · 14 concepts</div>
+                    <span class="t-tag tag-gap">gap found</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>App · Learn</span></div>
+          <div class="frame">
+            <div class="p shell">
+              <div class="blob"></div>
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="chips"><span class="chip streak">4 day</span><span class="chip lvl">Lv 4</span><span class="chip xp">1.2k</span></div>
+              </div>
+              <div class="body">
+                <h3>Pick your next climb</h3>
+                <p class="muted">Any subject. Keep the streak going.</p>
+                <div class="topics">
+                  <div class="topic">
+                    <div class="t-name">Modern Spanish</div>
+                    <div class="t-meta">Language · 48 concepts</div>
+                    <div class="bar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+                    <span class="t-tag tag-live">in progress</span>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">First Aid L2</div>
+                    <div class="t-meta">Health · 22 concepts</div>
+                    <div class="bar"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div>
+                    <span class="t-tag tag-live">in progress</span>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">Manager Coaching</div>
+                    <div class="t-meta">Soft skills · 31 concepts</div>
+                    <div class="bar"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+                    <span class="t-tag tag-new">new</span>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">SQL Window Fn</div>
+                    <div class="t-meta">Data · 19 concepts</div>
+                    <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
+                    <span class="t-tag tag-new">new</span>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">WWII Causes</div>
+                    <div class="t-meta">History · 36 concepts</div>
+                    <div class="bar"><i></i><i></i><i></i><i></i><i></i></div>
+                    <span class="t-tag tag-new">new</span>
+                  </div>
+                  <div class="topic">
+                    <div class="t-name">GDPR Essentials</div>
+                    <div class="t-meta">Compliance · 14 concepts</div>
+                    <div class="bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+                    <span class="t-tag tag-live">almost done</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIAGNOSTIC non-tech -->
+    <div class="section">
+      <div class="section-title">
+        <h2>03 — Diagnostic (non-tech example: history)</h2>
+        <span class="note">Same flow as SQL — content is what changes</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Diagnostic</span></div>
+          <div class="frame short">
+            <div class="b shell">
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="chips"><span class="chip-r">4</span><span class="chip-b">XP</span></div>
+              </div>
+              <div class="body">
+                <div class="eyebrow"><span class="shape-tr"></span> WWII Causes · Q 04 / 10</div>
+                <div class="q-title">Which treaty is most often cited as a long-term root of interwar instability in Europe?</div>
+                <div class="opts">
+                  <div class="opt"><span class="s sq"></span>Treaty of Locarno</div>
+                  <div class="opt on"><span class="s ci"></span>Treaty of Versailles</div>
+                  <div class="opt"><span class="s tr"></span>Kellogg–Briand Pact</div>
+                </div>
+                <div style="margin-top:12px"><span class="btn btn-blue" style="width:100%">Submit</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Diagnostic</span></div>
+          <div class="frame short">
+            <div class="p shell">
+              <div class="blob"></div>
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="chips"><span class="chip streak">4 day</span><span class="chip xp">1.2k</span></div>
+              </div>
+              <div class="body">
+                <div class="muted" style="margin-bottom:6px;font-weight:700">WWII Causes · Q 4 of 10</div>
+                <div class="q-title">Which treaty is most often cited as a long-term root of interwar instability in Europe?</div>
+                <div class="opts">
+                  <div class="opt">Treaty of Locarno</div>
+                  <div class="opt on">Treaty of Versailles</div>
+                  <div class="opt">Kellogg–Briand Pact</div>
+                </div>
+                <div style="margin-top:12px"><span class="btn" style="width:100%">Check answer</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROADMAP -->
+    <div class="section">
+      <div class="section-title">
+        <h2>04 — Personal roadmap / knowledge graph</h2>
+        <span class="note">Spanish path example — done / now / locked</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Roadmap</span></div>
+          <div class="frame">
+            <div class="b shell">
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="navlinks"><span>Modern Spanish</span></div>
+              </div>
+              <div class="body">
+                <div class="eyebrow">Root gap · ser vs estar</div>
+                <h3>Your path</h3>
+                <p class="muted"><span class="shape-sq"></span>done &nbsp; <span class="shape-dot"></span>now &nbsp; locked ahead</p>
+                <div class="graph">
+                  <div class="edge" style="left:70px;top:70px;width:90px;transform:rotate(18deg)"></div>
+                  <div class="edge" style="left:70px;top:70px;width:100px;transform:rotate(-20deg)"></div>
+                  <div class="edge" style="left:180px;top:130px;width:90px;transform:rotate(15deg)"></div>
+                  <div class="edge" style="left:170px;top:40px;width:100px;transform:rotate(8deg)"></div>
+                  <div class="node done" style="left:20px;top:50px">Articles</div>
+                  <div class="node done" style="left:160px;top:20px">Noun gender</div>
+                  <div class="node now" style="left:150px;top:110px">Ser vs estar</div>
+                  <div class="node lock" style="left:290px;top:50px">Past tenses</div>
+                  <div class="node lock" style="left:280px;top:150px">Subjunctive</div>
+                </div>
+                <div style="margin-top:12px"><span class="btn">Continue lesson</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Roadmap</span></div>
+          <div class="frame">
+            <div class="p shell">
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="chips"><span class="chip streak">4 day</span></div>
+              </div>
+              <div class="body">
+                <h3>Modern Spanish</h3>
+                <p class="muted">Root gap: ser vs estar — climb from here.</p>
+                <div class="graph">
+                  <div class="edge" style="left:70px;top:70px;width:90px;transform:rotate(18deg)"></div>
+                  <div class="edge" style="left:70px;top:70px;width:100px;transform:rotate(-20deg)"></div>
+                  <div class="edge" style="left:180px;top:130px;width:90px;transform:rotate(15deg)"></div>
+                  <div class="edge" style="left:170px;top:40px;width:100px;transform:rotate(8deg)"></div>
+                  <div class="node done" style="left:20px;top:50px">Articles</div>
+                  <div class="node done" style="left:160px;top:20px">Noun gender</div>
+                  <div class="node now" style="left:150px;top:110px">Ser vs estar</div>
+                  <div class="node lock" style="left:290px;top:50px">Past tenses</div>
+                  <div class="node lock" style="left:280px;top:150px">Subjunctive</div>
+                </div>
+                <div style="margin-top:12px"><span class="btn">Continue climb</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LESSON -->
+    <div class="section">
+      <div class="section-title">
+        <h2>05 — Generated lesson (soft skills)</h2>
+        <span class="note">Manager coaching — how reading density feels day-to-day</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Lesson</span></div>
+          <div class="frame short">
+            <div class="b shell">
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="navlinks"><span>Manager Coaching</span></div>
+              </div>
+              <div class="body">
+                <div class="lesson-head">
+                  <div class="lesson-mark">L</div>
+                  <div>
+                    <div class="eyebrow">Lesson · feedback loops</div>
+                    <h3>Giving corrective feedback</h3>
+                  </div>
+                </div>
+                <div class="lesson-body">
+                  Corrective feedback works when the other person can act on it the same day. Name the behaviour, not the person. Anchor to one observed moment.
+                  <div class="callout">Root gap for you: separating intent from impact. Most skipped step in your diagnostic answers.</div>
+                  Try this structure: Observe → Impact → Ask → Agree next step.
+                </div>
+                <div class="check"><span class="box"></span><span style="font-size:12px;font-weight:600">I can write one Observe→Impact line</span></div>
+                <div style="margin-top:12px"><span class="btn btn-blue">Mark checkpoint</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Lesson</span></div>
+          <div class="frame short">
+            <div class="p shell">
+              <div class="blob"></div>
+              <div class="topbar">
+                <span class="mark">Upvex</span>
+                <div class="chips"><span class="chip xp">+40 XP</span></div>
+              </div>
+              <div class="body">
+                <div class="lesson-head">
+                  <div class="lesson-mark">L</div>
+                  <div>
+                    <div class="muted" style="margin:0;font-weight:700">Manager Coaching</div>
+                    <h3>Giving corrective feedback</h3>
+                  </div>
+                </div>
+                <div class="lesson-body">
+                  Corrective feedback works when the other person can act on it the same day. Name the behaviour, not the person.
+                  <div class="callout">Your root gap: separating intent from impact. Fix this and the streak keeps climbing.</div>
+                  Try: Observe → Impact → Ask → Agree next step.
+                </div>
+                <div class="check"><span class="box"></span><span style="font-size:12px;font-weight:700">Checkpoint ready</span></div>
+                <div style="margin-top:12px"><span class="btn">Claim +40 XP</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN TOPICS -->
+    <div class="section">
+      <div class="section-title">
+        <h2>06 — Admin · topic catalog</h2>
+        <span class="note">Internal ops — graph readiness across any subject</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Admin</span></div>
+          <div class="frame tall">
+            <div class="b" style="height:100%">
+              <div class="admin-layout">
+                <div class="aside">
+                  <div class="logo">Upvex Admin</div>
+                  <a class="on">Topics</a>
+                  <a>Graphs</a>
+                  <a>Diagnostics</a>
+                  <a>Materials</a>
+                  <a>Contracts</a>
+                </div>
+                <div class="admin-main">
+                  <div class="eyebrow">Catalog</div>
+                  <h3 style="margin-bottom:10px">Topics</h3>
+                  <table class="table">
+                    <thead><tr><th>Topic</th><th>Domain</th><th>Diag</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td>Modern Spanish</td><td>Language</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                      <tr><td>First Aid L2</td><td>Health</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                      <tr><td>Manager Coaching</td><td>Soft skills</td><td><span class="pill warn">6/8</span></td><td>Edit</td></tr>
+                      <tr><td>GDPR Essentials</td><td>Compliance</td><td><span class="pill info">graph</span></td><td>Edit</td></tr>
+                      <tr><td>WWII Causes</td><td>History</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                      <tr><td>SQL Windows</td><td>Data</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                    </tbody>
+                  </table>
+                  <div style="margin-top:12px"><span class="btn btn-ghost">+ New topic</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Admin</span></div>
+          <div class="frame tall">
+            <div class="p" style="height:100%">
+              <div class="admin-layout">
+                <div class="aside">
+                  <div class="logo">Upvex Admin</div>
+                  <a class="on">Topics</a>
+                  <a>Graphs</a>
+                  <a>Diagnostics</a>
+                  <a>Materials</a>
+                  <a>Contracts</a>
+                </div>
+                <div class="admin-main">
+                  <h3 style="margin-bottom:10px">Topics</h3>
+                  <table class="table">
+                    <thead><tr><th>Topic</th><th>Domain</th><th>Diag</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td>Modern Spanish</td><td>Language</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                      <tr><td>First Aid L2</td><td>Health</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                      <tr><td>Manager Coaching</td><td>Soft skills</td><td><span class="pill warn">6/8</span></td><td>Edit</td></tr>
+                      <tr><td>GDPR Essentials</td><td>Compliance</td><td><span class="pill info">graph</span></td><td>Edit</td></tr>
+                      <tr><td>WWII Causes</td><td>History</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                      <tr><td>SQL Windows</td><td>Data</td><td><span class="pill ok">ready</span></td><td>Edit</td></tr>
+                    </tbody>
+                  </table>
+                  <div style="margin-top:12px"><span class="btn btn-yellow">+ New topic</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN GRAPH -->
+    <div class="section">
+      <div class="section-title">
+        <h2>07 — Admin · graph authoring</h2>
+        <span class="note">Editing prerequisite nodes for First Aid</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Graph editor</span></div>
+          <div class="frame">
+            <div class="b shell">
+              <div class="topbar">
+                <span class="mark">Graph · First Aid L2</span>
+                <span class="btn" style="padding:5px 10px;font-size:11px">Save</span>
+              </div>
+              <div class="body" style="display:grid;grid-template-columns:1fr 120px;gap:8px;padding-top:10px">
+                <div class="graph" style="height:100%;margin:0">
+                  <div class="edge" style="left:50px;top:80px;width:100px;transform:rotate(10deg)"></div>
+                  <div class="edge" style="left:50px;top:80px;width:110px;transform:rotate(-25deg)"></div>
+                  <div class="edge" style="left:180px;top:40px;width:90px;transform:rotate(20deg)"></div>
+                  <div class="node" style="left:16px;top:60px">ABC check</div>
+                  <div class="node now" style="left:150px;top:20px">CPR adult</div>
+                  <div class="node" style="left:150px;top:120px">Recovery pos.</div>
+                  <div class="node" style="left:280px;top:70px">AED use</div>
+                </div>
+                <div>
+                  <div class="eyebrow">Node</div>
+                  <div class="card" style="margin-bottom:8px">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:4px">CPR adult</div>
+                    <div style="font-size:10.5px;color:#6a6358;margin-bottom:8px">prereq · ABC check</div>
+                    <span class="pill info">selected</span>
+                  </div>
+                  <span class="btn btn-ghost" style="width:100%;font-size:11px;margin-bottom:6px">+ Node</span>
+                  <span class="btn btn-ghost" style="width:100%;font-size:11px">+ Edge</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Graph editor</span></div>
+          <div class="frame">
+            <div class="p shell">
+              <div class="topbar">
+                <span class="mark">First Aid L2</span>
+                <span class="btn" style="padding:5px 10px;font-size:11px">Save</span>
+              </div>
+              <div class="body" style="display:grid;grid-template-columns:1fr 120px;gap:8px;padding-top:10px">
+                <div class="graph" style="height:100%;margin:0">
+                  <div class="edge" style="left:50px;top:80px;width:100px;transform:rotate(10deg)"></div>
+                  <div class="edge" style="left:50px;top:80px;width:110px;transform:rotate(-25deg)"></div>
+                  <div class="edge" style="left:180px;top:40px;width:90px;transform:rotate(20deg)"></div>
+                  <div class="node" style="left:16px;top:60px">ABC check</div>
+                  <div class="node now" style="left:150px;top:20px">CPR adult</div>
+                  <div class="node" style="left:150px;top:120px">Recovery pos.</div>
+                  <div class="node" style="left:280px;top:70px">AED use</div>
+                </div>
+                <div>
+                  <div class="muted" style="font-weight:700;margin-bottom:6px">Node</div>
+                  <div class="topic" style="min-height:auto;margin-bottom:8px">
+                    <div class="t-name">CPR adult</div>
+                    <div class="t-meta">prereq · ABC</div>
+                  </div>
+                  <span class="btn btn-ghost" style="width:100%;font-size:11px;margin-bottom:6px">+ Node</span>
+                  <span class="btn btn-orange" style="width:100%;font-size:11px">+ Edge</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CORPORATE MATERIALS -->
+    <div class="section">
+      <div class="section-title">
+        <h2>08 — Corporate · material input &amp; curation</h2>
+        <span class="note">Business uploads playbooks/decks → Upvex curates a course graph</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Materials</span></div>
+          <div class="frame tall">
+            <div class="b shell">
+              <div class="topbar">
+                <span class="mark">Acme Corp · Materials</span>
+                <span class="btn btn-blue" style="padding:5px 10px;font-size:11px">Curate</span>
+              </div>
+              <div class="body">
+                <div class="steps">
+                  <span class="done">1 Upload</span>
+                  <span class="now">2 Map</span>
+                  <span class="todo">3 Graph</span>
+                  <span class="todo">4 Publish</span>
+                </div>
+                <div class="eyebrow">Source files</div>
+                <div class="drop">
+                  <div class="big">Drop PDFs, decks, playbooks</div>
+                  <div class="sm">We extract concepts and propose a prerequisite graph</div>
+                </div>
+                <div class="file-row"><span class="ico">PDF</span> Onboarding_Playbook_v4.pdf <span style="margin-left:auto;font-size:10px;color:#6a6358">12 pages</span></div>
+                <div class="file-row"><span class="ico" style="background:#e8b41b;color:#161311">PPT</span> Sales_Ramp_Q3.pptx <span style="margin-left:auto;font-size:10px;color:#6a6358">34 slides</span></div>
+                <div class="file-row"><span class="ico" style="background:#d6482f">DOC</span> Compliance_FAQ.docx <span style="margin-left:auto;font-size:10px;color:#6a6358">8 pages</span></div>
+                <div style="margin-top:10px" class="card">
+                  <div style="font-size:11px;font-weight:600;margin-bottom:4px">Proposed topic</div>
+                  <div style="font-size:13px;font-weight:600">Acme New-Hire Ramp</div>
+                  <div style="font-size:11px;color:#6a6358;margin-top:2px">18 concepts detected · 3 root gaps likely</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Materials</span></div>
+          <div class="frame tall">
+            <div class="p shell">
+              <div class="topbar">
+                <span class="mark">Acme Corp</span>
+                <span class="btn" style="padding:5px 10px;font-size:11px">Curate</span>
+              </div>
+              <div class="body">
+                <div class="steps">
+                  <span class="done">Upload</span>
+                  <span class="now">Map</span>
+                  <span class="todo">Graph</span>
+                  <span class="todo">Publish</span>
+                </div>
+                <div class="drop">
+                  <div class="big">Drop your company materials</div>
+                  <div class="sm">Playbooks, decks, FAQs — we build the course</div>
+                </div>
+                <div class="file-row"><span class="ico">PDF</span> Onboarding_Playbook_v4.pdf <span style="margin-left:auto;font-size:10px;opacity:.6">12p</span></div>
+                <div class="file-row"><span class="ico" style="background:#ffd23f;color:#2c2410">PPT</span> Sales_Ramp_Q3.pptx <span style="margin-left:auto;font-size:10px;opacity:.6">34s</span></div>
+                <div class="file-row"><span class="ico">DOC</span> Compliance_FAQ.docx <span style="margin-left:auto;font-size:10px;opacity:.6">8p</span></div>
+                <div class="topic" style="min-height:auto;margin-top:10px">
+                  <div class="t-name">Acme New-Hire Ramp</div>
+                  <div class="t-meta">18 concepts · 3 likely root gaps</div>
+                  <span class="t-tag tag-live">ready to map</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CORPORATE REVIEW -->
+    <div class="section">
+      <div class="section-title">
+        <h2>09 — Corporate · review curated course</h2>
+        <span class="note">Admin confirms concept list before publish to employees</span>
+      </div>
+      <div class="cols">
+        <div class="col-card">
+          <div class="col-label"><span class="tag-b">3 · Bauhaus</span><span>Review</span></div>
+          <div class="frame short">
+            <div class="b shell">
+              <div class="topbar">
+                <span class="mark">Curated · Acme Ramp</span>
+                <span class="btn" style="padding:5px 10px;font-size:11px">Publish</span>
+              </div>
+              <div class="body">
+                <div class="steps">
+                  <span class="done">1 Upload</span>
+                  <span class="done">2 Map</span>
+                  <span class="done">3 Graph</span>
+                  <span class="now">4 Publish</span>
+                </div>
+                <table class="table">
+                  <thead><tr><th>Concept</th><th>Source</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>Product north star</td><td>Playbook p.2</td><td><span class="pill ok">mapped</span></td></tr>
+                    <tr><td>CRM hygiene</td><td>Sales deck</td><td><span class="pill ok">mapped</span></td></tr>
+                    <tr><td>Data handling</td><td>FAQ §3</td><td><span class="pill warn">needs edit</span></td></tr>
+                    <tr><td>Escalation path</td><td>Playbook p.9</td><td><span class="pill info">new</span></td></tr>
+                  </tbody>
+                </table>
+                <p class="muted" style="margin-top:10px">Employees will start with a diagnostic against this graph.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-card">
+          <div class="col-label"><span class="tag-p">7 · Playful</span><span>Review</span></div>
+          <div class="frame short">
+            <div class="p shell">
+              <div class="topbar">
+                <span class="mark">Acme Ramp</span>
+                <span class="btn" style="padding:5px 10px;font-size:11px">Publish</span>
+              </div>
+              <div class="body">
+                <div class="steps">
+                  <span class="done">Upload</span>
+                  <span class="done">Map</span>
+                  <span class="done">Graph</span>
+                  <span class="now">Publish</span>
+                </div>
+                <table class="table">
+                  <thead><tr><th>Concept</th><th>Source</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr><td>Product north star</td><td>Playbook p.2</td><td><span class="pill ok">mapped</span></td></tr>
+                    <tr><td>CRM hygiene</td><td>Sales deck</td><td><span class="pill ok">mapped</span></td></tr>
+                    <tr><td>Data handling</td><td>FAQ §3</td><td><span class="pill warn">edit</span></td></tr>
+                    <tr><td>Escalation path</td><td>Playbook p.9</td><td><span class="pill info">new</span></td></tr>
+                  </tbody>
+                </table>
+                <p class="muted" style="margin-top:10px">Team gets a diagnostic first — then personal paths.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <h2>How to choose between these two</h2>
+      <div class="vgrid">
+        <div>
+          <h3 style="color:#2451c4">3 · Bauhaus wins when…</h3>
+          <ul>
+            <li>You want one visual language that teaches the product (gap / root / lesson = circle / triangle / square).</li>
+            <li>Admin + corporate screens must feel serious and scannable for ops and B2B buyers.</li>
+            <li>Any-subject expansion should still feel like a system, not a kids’ app.</li>
+            <li>Pitch / investor decks need intellectual credibility.</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="color:#d6551e">7 · Playful wins when…</h3>
+          <ul>
+            <li>Retention and streaks are the growth lever (already in the product).</li>
+            <li>Schools, nonprofits, and individual learners are the primary wedge.</li>
+            <li>You want the brand to feel warm and sticky on first open.</li>
+            <li>You’re OK dialing playfulness down on admin (or using a quieter admin variant).</li>
+          </ul>
+        </div>
+      </div>
+      <div class="pick">
+        Hybrid worth considering: <strong>Bauhaus for marketing + admin + corporate</strong>, with
+        <strong>Playful accents only on learner streaks/XP/checkpoints</strong>. Tell me
+        <em>3</em>, <em>7</em>, or <em>hybrid</em> and I’ll rebuild the real site + start aligning app tokens.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

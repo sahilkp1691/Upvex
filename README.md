@@ -9,7 +9,7 @@ serving a fixed course.
 
 | Layer | Tech |
 | --- | --- |
-| Frontend | SvelteKit (Svelte 5, plain JS, SPA mode) |
+| Frontend | SvelteKit (Svelte 5, plain JS, SPA mode) — two competing skins |
 | Backend | FastAPI (async), SQLAlchemy 2 |
 | Database | Postgres + JSONB (Supabase Postgres or any Postgres) |
 | Tasks | Celery + Redis (content generation, daily streak job) |
@@ -20,27 +20,17 @@ serving a fixed course.
 
 ```
 backend/
-  app/
-    main.py            FastAPI app, startup migrations
-    config.py          pydantic-settings (.env)
-    models.py          all entities (User, ConceptNode/Edge, UserGoal, GeneratedContent, ...)
-    migrations.py      idempotent migration + seed runner
-    auth.py            Supabase JWT verification + dev bypass
-    routes/            me, catalog, goals, diagnostic, roadmap, content, gamification, admin
-    services/          scoring, graph_traversal (recursive CTEs), sequencing, signature, xp
-    agents/evaluator.py  Diagnostic Evaluator (deterministic + LLM assist)
-    generation/        OpenRouter client + prompt assembly from GenerationContract
-    tasks/             Celery app, generate_content, daily streak evaluation
-    seed/              Data Engineering catalog, Spark + SQL graphs, question banks
-  tests/               unit tests + e2e_smoke.py
-frontend/
-  src/routes/          landing, auth, onboarding, topics, diagnostic, roadmap, lesson,
-                       leaderboard, profile, admin/*
-  src/lib/             api.js, supabase.js, stores.js, shared components
+  app/                 FastAPI app, routes, services, generation, tasks, seed
+  tests/
+frontend-playful/      Full Playful skin (individuals demo) — port 5173
+frontend-soft/         Softened Playful skin (corporate demo) — port 5174
+frontend/              Pointer README only (do not deploy)
+designs/               Static HTML design references
 docker-compose.yml     Redis + local Postgres for development
 .env.example           all configuration knobs
 ```
 
+Both frontends share one backend. Demo either URL independently; promote one to production later by pointing the custom domain at that Railway service.
 ## Getting started (local development)
 
 Prerequisites: Python 3.11+, Node 20+, Docker.
@@ -56,12 +46,18 @@ python3 -m venv .venv
 cp ../.env.example .env          # defaults work out of the box for local dev
 .venv/bin/uvicorn app.main:app --port 8000 --reload
 
-# 3. Frontend (new terminal)
-cd frontend
+# 3. Frontend — pick a skin (or run both)
+cd frontend-playful
 npm install
-npm run dev                      # http://localhost:5173
+npm run dev                      # http://localhost:5173  (full Playful)
+
+# optional second terminal
+cd frontend-soft
+npm install
+npm run dev                      # http://localhost:5174  (softened)
 ```
 
+Copy the same `VITE_*` keys into each frontend `.env`. Backend `CORS_ORIGINS` must include both local ports (default in `.env.example`).
 On first startup the backend creates all tables and seeds: the Data Engineering category,
 Apache Spark + SQL topics with full prerequisite graphs, ~60 diagnostic questions, the v1
 GenerationContract, and milestone badges.
@@ -78,8 +74,10 @@ GenerationContract, and milestone badges.
 ### Production-style setup
 
 1. Create a Supabase project. Put its URL, anon key, and JWT secret in `backend/.env`
-   (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`) and in `frontend/.env`
+   (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`) and in both
+   `frontend-playful/.env` and `frontend-soft/.env`
    (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`). Set `DEV_AUTH_BYPASS=false`.
+   Add both frontend origins (and later the production winner) under Supabase Redirect URLs.
 2. Point `DATABASE_URL` at Supabase's Postgres (session pooler, `postgresql+asyncpg://` scheme).
 3. Set `CELERY_TASK_ALWAYS_EAGER=false` and run a worker + beat:
 
@@ -101,6 +99,20 @@ cd backend
 .venv/bin/python -m pytest tests/ -q            # unit tests (scoring, graph traversal, sequencing, signature)
 .venv/bin/python tests/e2e_smoke.py             # full-flow smoke test against a running server
 ```
+
+## Railway (one API, two frontends)
+
+| Service | Root Directory | Config file | Typical use |
+| --- | --- | --- | --- |
+| `api` | `/backend` | `/backend/railway.toml` | Shared API |
+| `web-playful` | `/frontend-playful` | `/frontend-playful/railway.toml` | Individuals demo |
+| `web-soft` | `/frontend-soft` | `/frontend-soft/railway.toml` | Corporate demo |
+
+Both web services use the same `VITE_API_URL` pointing at the API service. On the API, set
+`CORS_ORIGINS` to a comma list of both Railway frontend URLs (plus local ports for dev).
+
+**Promote a winner:** attach the production custom domain to that web service, update
+`CORS_ORIGINS` + Supabase redirect URLs, then stop or delete the other web service.
 
 ## How the core loop works
 
