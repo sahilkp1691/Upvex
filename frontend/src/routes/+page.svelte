@@ -1,8 +1,8 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { currentUser, userLoaded } from '$lib/stores.js';
-	import Logo from '$lib/Logo.svelte';
-	import ThemeToggle from '$lib/ThemeToggle.svelte';
+	import MarketingNav from '$lib/marketing/MarketingNav.svelte';
+	import MarketingFooter from '$lib/marketing/MarketingFooter.svelte';
 
 	$effect(() => {
 		if ($userLoaded && $currentUser) {
@@ -10,627 +10,542 @@
 		}
 	});
 
-	const nodes = [
-		{ id: 'sql', label: 'SQL core', x: 16, y: 58, z: 28, state: 'done' },
-		{ id: 'join', label: 'Joins', x: 36, y: 40, z: 56, state: 'done' },
-		{ id: 'win', label: 'Windows', x: 40, y: 74, z: -18, state: 'gap' },
-		{ id: 'spark', label: 'Spark', x: 62, y: 28, z: 84, state: 'next' },
-		{ id: 'opt', label: 'Optimise', x: 84, y: 46, z: 12, state: 'lock' },
-		{ id: 'stream', label: 'Streaming', x: 72, y: 68, z: -36, state: 'lock' }
+	const steps = [
+		{
+			n: '01',
+			title: 'Diagnose',
+			body: 'An adaptive quiz branches on every answer and tags each question to a concept node, not just a topic.'
+		},
+		{
+			n: '02',
+			title: 'Trace the root',
+			body: 'A recursive walk up the prerequisite graph finds the upstream concept actually causing the gap.'
+		},
+		{
+			n: '03',
+			title: 'Generate the lesson',
+			body: 'Content is assembled live against your skill, gaps, learning style, and tone — then cached for reuse.'
+		},
+		{
+			n: '04',
+			title: 'Climb with momentum',
+			body: 'XP, streaks, levels, and badges mark checkpoints that matter, like resolving a root gap.'
+		}
 	];
 
-	const edges = [
-		['sql', 'join'],
-		['sql', 'win'],
-		['join', 'spark'],
-		['win', 'spark'],
-		['spark', 'opt'],
-		['spark', 'stream']
+	const pillars = [
+		{
+			n: '01',
+			title: 'Real diagnosis',
+			body: 'An adaptive quiz maps skill per concept, then traces weaknesses upstream to the foundation.',
+			icon: 'diagnose'
+		},
+		{
+			n: '02',
+			title: 'Lessons for you',
+			body: 'Content is generated against your profile — skill, gaps, style, tone — not a static course for everyone.',
+			icon: 'lesson'
+		},
+		{
+			n: '03',
+			title: 'Momentum that sticks',
+			body: 'XP, streaks, levels, and badges for checkpoints that matter, like resolving a root gap.',
+			icon: 'momentum'
+		}
 	];
 
-	const nodeById = Object.fromEntries(nodes.map((n) => [n.id, n]));
+	const useCases = [
+		{
+			href: '/solutions#teams',
+			label: 'Teams & companies',
+			body: 'Diagnose real skill gaps across engineers and data teams before they become incidents.'
+		},
+		{
+			href: '/solutions#schools',
+			label: 'Schools & nonprofits',
+			body: 'Trace students back to the exact earlier concept that never stuck, with sponsored access options.'
+		},
+		{
+			href: '/solutions#individuals',
+			label: 'Individual learners',
+			body: 'Skip what you already know. Spend time only on the concept actually blocking your progress.'
+		}
+	];
 
-	let tiltX = $state(0);
-	let tiltY = $state(0);
-	let reduceMotion = $state(false);
-
-	$effect(() => {
-		const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-		reduceMotion = mq.matches;
-		const onChange = () => (reduceMotion = mq.matches);
-		mq.addEventListener('change', onChange);
-		return () => mq.removeEventListener('change', onChange);
-	});
-
-	function onPointer(e) {
-		if (reduceMotion) return;
-		const r = e.currentTarget.getBoundingClientRect();
-		const nx = (e.clientX - r.left) / r.width - 0.5;
-		const ny = (e.clientY - r.top) / r.height - 0.5;
-		tiltY = nx * 16;
-		tiltX = -ny * 9;
-	}
-
-	function resetTilt() {
-		tiltX = 0;
-		tiltY = 0;
-	}
+	const stats = [
+		{ k: '2', v: 'full tracks live — SQL & Spark' },
+		{ k: '60+', v: 'diagnostic questions seeded' },
+		{ k: '100%', v: 'lessons generated per profile' },
+		{ k: '1', v: 'prerequisite graph behind it all' }
+	];
 </script>
 
 <svelte:head>
 	<title>Upvex — learning that points up</title>
 	<meta
 		name="description"
-		content="Diagnose what you know, close the root gaps, climb with lessons built for you."
+		content="Upvex diagnoses what you actually know, traces weaknesses to the root, and generates the exact lesson you need next."
 	/>
 </svelte:head>
 
 <div class="landing">
-	<div class="grain" aria-hidden="true"></div>
-	<div class="light" aria-hidden="true"></div>
-
-	<header class="nav-pill">
-		<Logo size={28} />
-		<div class="nav-actions">
-			<ThemeToggle />
-			<a href="/auth" class="neo-btn">Sign in</a>
-		</div>
-	</header>
+	<MarketingNav />
 
 	<section class="hero">
-		<div class="copy">
-			<p class="eyebrow">Knowledge, mapped in depth</p>
-			<h1>
-				Skills on an
-				<em>upward vector.</em>
-			</h1>
+		<div class="hero-copy">
+			<p class="eyebrow">Adaptive learning engine for technical skills</p>
+			<h1>Skills on an <span class="grad">upward vector.</span></h1>
 			<p class="sub">
 				Diagnose what you actually know, trace weaknesses to the root, then climb a graph of
-				lessons built for you — not a course built for everyone.
+				lessons generated for you — not a static course built for everyone.
 			</p>
 			<div class="cta-row">
-				<a href="/auth" class="neo-cta">Start learning</a>
-				<span class="cta-hint">Adaptive diagnosis. No static syllabus.</span>
+				<a href="/auth" class="btn btn-primary btn-lg">Start learning</a>
+				<a href="#how-it-works" class="btn btn-ghost btn-lg">See how it works &darr;</a>
 			</div>
 		</div>
 
-		<div
-			class="chamber"
-			role="img"
-			aria-label="Spatial knowledge graph of SQL and Spark concepts"
-			onpointermove={onPointer}
-			onpointerleave={resetTilt}
-		>
-			<div
-				class="scene"
-				class:still={reduceMotion}
-				style="transform: rotateX({tiltX}deg) rotateY({tiltY}deg)"
-			>
-				<div class="floor"></div>
-				<svg class="threads" viewBox="0 0 100 100" preserveAspectRatio="none">
-					{#each edges as [a, b], i (a + b)}
-						<line
-							x1={nodeById[a].x}
-							y1={nodeById[a].y}
-							x2={nodeById[b].x}
-							y2={nodeById[b].y}
-							class="thread"
-							style="--d: {0.35 + i * 0.12}s"
-						/>
-					{/each}
-				</svg>
+		<div class="hero-visual" aria-hidden="true">
+			<svg class="ascend" viewBox="0 0 460 300" fill="none" preserveAspectRatio="xMidYMid meet">
+				<line x1="20" y1="270" x2="440" y2="270" class="axis" />
+				<path
+					class="ascend-fill"
+					d="M20 250 C 100 245, 140 200, 190 190 S 280 130, 330 95 S 400 45, 430 30 L 430 270 L 20 270 Z"
+				/>
+				<path
+					class="ascend-line"
+					d="M20 250 C 100 245, 140 200, 190 190 S 280 130, 330 95 S 400 45, 430 30"
+				/>
+				<circle class="pt done" cx="20" cy="250" r="6" />
+				<circle class="pt done" cx="190" cy="190" r="6" />
+				<circle class="pt gap" cx="330" cy="95" r="7" />
+				<circle class="pt next" cx="430" cy="30" r="9" />
+			</svg>
+			<div class="tag tag-done">Diagnose</div>
+			<div class="tag tag-gap-lbl">Root gap found</div>
+			<div class="tag tag-next-lbl">Mastery</div>
+		</div>
+	</section>
 
-				{#each nodes as n (n.id)}
-					<div
-						class="node {n.state}"
-						style="--x: {n.x}%; --y: {n.y}%; --z: {n.z}px; --delay: {n.z * 4}ms"
-					>
-						<span class="orb"></span>
-						<span class="n-label">{n.label}</span>
+	<section class="stats">
+		{#each stats as s, i (s.v)}
+			<div class="stat" style="--i: {i}">
+				<span class="stat-k">{s.k}</span>
+				<span class="stat-v">{s.v}</span>
+			</div>
+		{/each}
+	</section>
+
+	<section class="how" id="how-it-works">
+		<p class="section-eyebrow">How it works</p>
+		<h2>From guesswork to a graph you can climb.</h2>
+		<div class="steps">
+			{#each steps as s, i (s.n)}
+				<div class="step" style="--i: {i}">
+					<span class="step-n">{s.n}</span>
+					<h3>{s.title}</h3>
+					<p>{s.body}</p>
+				</div>
+			{/each}
+		</div>
+	</section>
+
+	<section class="pillars" id="product">
+		<p class="section-eyebrow">What&rsquo;s inside</p>
+		<h2>Built as a real diagnostic system, not a quiz app.</h2>
+		<div class="pillar-grid">
+			{#each pillars as p, i (p.n)}
+				<article class="pillar" style="--i: {i}">
+					<div class="pillar-icon" aria-hidden="true">
+						{#if p.icon === 'diagnose'}
+							<svg viewBox="0 0 32 32" fill="none">
+								<circle cx="9" cy="16" r="4" />
+								<circle cx="22" cy="9" r="4" />
+								<circle cx="22" cy="23" r="4" />
+								<path d="M13 16h4M18.5 11.5l-4.5 3M18.5 20.5l-4.5-3" />
+							</svg>
+						{:else if p.icon === 'lesson'}
+							<svg viewBox="0 0 32 32" fill="none">
+								<path d="M8 23 V12 h6 v11 M18 23 V8 h6 v15" />
+							</svg>
+						{:else}
+							<svg viewBox="0 0 32 32" fill="none">
+								<path d="M8 21 L16 8 L24 21 L16 17 Z" />
+							</svg>
+						{/if}
 					</div>
-				{/each}
-
-				<div class="callout gap-tag" style="--x: 40%; --y: 74%; --z: -18px">Root gap</div>
-				<div class="callout next-tag" style="--x: 62%; --y: 28%; --z: 84px">Up next</div>
-			</div>
+					<span class="p-num">{p.n}</span>
+					<h3>{p.title}</h3>
+					<p>{p.body}</p>
+				</article>
+			{/each}
 		</div>
 	</section>
 
-	<section class="pillars">
-		<article class="plate" style="--i: 0">
-			<div class="plate-icon" aria-hidden="true">
-				<svg viewBox="0 0 32 32" fill="none">
-					<circle cx="10" cy="16" r="4" />
-					<circle cx="22" cy="10" r="4" />
-					<circle cx="22" cy="22" r="4" />
-					<path d="M14 16h4M18.5 12.5l-5 2.5M18.5 19.5l-5-2.5" />
-				</svg>
+	<section class="usecases" id="use-cases">
+		<div class="usecases-head">
+			<div>
+				<p class="section-eyebrow">Who it&rsquo;s for</p>
+				<h2>Built for more than one kind of learner.</h2>
 			</div>
-			<span class="p-num">01</span>
-			<h3>Real diagnosis</h3>
-			<p>
-				An adaptive quiz maps skill per concept, then walks the prerequisite graph upstream until
-				it finds the foundation you are missing.
-			</p>
-		</article>
-		<article class="plate" style="--i: 1">
-			<div class="plate-icon" aria-hidden="true">
-				<svg viewBox="0 0 32 32" fill="none">
-					<path d="M8 22 V12 h6 v10 M18 22 V8 h6 v14" />
-				</svg>
-			</div>
-			<span class="p-num">02</span>
-			<h3>Lessons for you</h3>
-			<p>
-				Content is generated against your profile — skill, gaps, style, tone — not a static
-				syllabus copied to every learner.
-			</p>
-		</article>
-		<article class="plate" style="--i: 2">
-			<div class="plate-icon" aria-hidden="true">
-				<svg viewBox="0 0 32 32" fill="none">
-					<path d="M8 20 L16 8 L24 20 L16 16 Z" />
-				</svg>
-			</div>
-			<span class="p-num">03</span>
-			<h3>Momentum that sticks</h3>
-			<p>
-				XP, streaks, levels, and badges for checkpoints that matter — like resolving a root gap
-				and unlocking the next climb.
-			</p>
-		</article>
+			<a href="/solutions" class="see-all">See all solutions &rarr;</a>
+		</div>
+		<div class="usecase-grid">
+			{#each useCases as u, i (u.href)}
+				<a class="usecase" href={u.href} style="--i: {i}">
+					<h3>{u.label}</h3>
+					<p>{u.body}</p>
+					<span class="usecase-link">Explore &rarr;</span>
+				</a>
+			{/each}
+		</div>
 	</section>
+
+	<section class="quote">
+		<blockquote>
+			&ldquo;Competence should be measured by what you can do next &mdash; not which course you
+			finished.&rdquo;
+		</blockquote>
+		<p class="quote-attr">The Upvex approach</p>
+	</section>
+
+	<section class="final-cta">
+		<h2>Start on your vector today.</h2>
+		<p>Free adaptive diagnostic. No static syllabus.</p>
+		<a href="/auth" class="btn btn-primary btn-lg">Start learning</a>
+	</section>
+
+	<MarketingFooter />
 </div>
 
 <style>
 	.landing {
 		--font-display: 'Bricolage Grotesk', 'Plus Jakarta Sans', sans-serif;
-		--neo: #1a2336;
-		--neo-hi: #2a3854;
-		--neo-lo: #0c111c;
-		--neo-convex:
-			10px 10px 22px var(--neo-lo), -8px -8px 18px var(--neo-hi),
-			inset 1px 1px 0 color-mix(in srgb, white 8%, transparent);
-		--neo-concave:
-			inset 8px 8px 16px var(--neo-lo), inset -6px -6px 14px var(--neo-hi);
-		--neo-press:
-			inset 6px 6px 12px var(--neo-lo), inset -4px -4px 10px var(--neo-hi);
-		--grid: color-mix(in srgb, var(--up) 22%, transparent);
-		--landing-text: #e8eefc;
-		--landing-dim: #8b9bb8;
-		--landing-faint: #62728c;
-
-		position: relative;
 		min-height: 100vh;
-		overflow: clip;
-		color: var(--landing-text);
-		background: var(--neo);
-		isolation: isolate;
-	}
-
-	:global([data-theme='light']) .landing {
-		--neo: #dce4f0;
-		--neo-hi: #ffffff;
-		--neo-lo: #b7c3d6;
-		--neo-convex:
-			10px 10px 20px var(--neo-lo), -8px -8px 18px var(--neo-hi),
-			inset 1px 1px 0 rgba(255, 255, 255, 0.7);
-		--neo-concave:
-			inset 8px 8px 16px var(--neo-lo), inset -6px -6px 12px var(--neo-hi);
-		--neo-press:
-			inset 6px 6px 12px var(--neo-lo), inset -4px -4px 10px var(--neo-hi);
-		--grid: color-mix(in srgb, var(--up) 28%, transparent);
-		--landing-text: #152033;
-		--landing-dim: #4c5d78;
-		--landing-faint: #6e7d94;
-	}
-
-	.grain,
-	.light {
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-		z-index: 0;
-	}
-
-	.light {
+		display: flex;
+		flex-direction: column;
 		background:
-			radial-gradient(ellipse 70% 50% at 12% -8%, color-mix(in srgb, white 7%, transparent), transparent 52%),
-			radial-gradient(ellipse 45% 40% at 88% 8%, color-mix(in srgb, var(--up) 10%, transparent), transparent 50%),
-			radial-gradient(ellipse 40% 30% at 70% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%);
+			radial-gradient(ellipse 60% 45% at 85% -8%, var(--mesh-b), transparent 55%),
+			radial-gradient(ellipse 55% 40% at 8% 8%, var(--mesh-a), transparent 55%),
+			var(--bg);
 	}
 
-	.grain {
-		opacity: 0.045;
-		mix-blend-mode: overlay;
-		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-		background-size: 180px 180px;
+	section {
+		width: 100%;
 	}
 
-	.nav-pill {
-		position: relative;
-		z-index: 4;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		width: min(1120px, calc(100% - 32px));
-		margin: 22px auto 0;
-		padding: 10px 12px 10px 18px;
-		border-radius: 999px;
-		background: var(--neo);
-		box-shadow: var(--neo-convex);
-	}
-
-	.nav-actions {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-	}
-
-	.nav-pill :global(.theme-toggle) {
-		border-radius: 999px;
-		box-shadow: var(--neo-concave);
-		background: var(--neo);
-		color: var(--landing-dim);
-	}
-
-	.nav-pill :global(.theme-toggle:hover) {
-		color: var(--landing-text);
-		background: var(--neo);
-		border-color: transparent;
-	}
-
-	.neo-btn {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		padding: 8px 16px;
-		border-radius: 999px;
-		background: var(--neo);
-		color: var(--landing-text);
-		font-size: 13.5px;
-		font-weight: 650;
-		box-shadow: var(--neo-convex);
-		text-decoration: none;
-		transition:
-			box-shadow 0.18s ease,
-			transform 0.18s ease;
-	}
-
-	.neo-btn:hover {
-		text-decoration: none;
-		transform: translateY(-1px);
-	}
-
-	.neo-btn:active {
-		box-shadow: var(--neo-press);
-		transform: translateY(1px);
-	}
-
-	.hero {
-		position: relative;
-		z-index: 2;
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-		gap: 28px 40px;
-		align-items: center;
-		width: min(1180px, calc(100% - 40px));
-		margin: 0 auto;
-		padding: 48px 0 36px;
-		min-height: min(78vh, 760px);
-	}
-
-	.copy {
-		position: relative;
-		z-index: 2;
-	}
-
-	.eyebrow {
+	.eyebrow,
+	.section-eyebrow {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
-		margin: 0 0 18px;
-		padding: 7px 14px;
-		border-radius: 999px;
-		background: var(--neo);
-		box-shadow: var(--neo-concave);
-		font-size: 11.5px;
+		font-size: 12px;
 		font-weight: 700;
-		letter-spacing: 0.14em;
+		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--up);
-		animation: rise 0.8s ease both;
+	}
+
+	.eyebrow::before,
+	.section-eyebrow::before {
+		content: '';
+		width: 18px;
+		height: 1.5px;
+		background: var(--up);
+		display: inline-block;
+	}
+
+	/* Hero */
+	.hero {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 40px;
+		align-items: center;
+		max-width: 1180px;
+		margin: 0 auto;
+		padding: clamp(40px, 7vw, 88px) clamp(20px, 4vw, 48px) 56px;
+	}
+
+	.hero-copy {
+		animation: rise 0.7s ease both;
+	}
+
+	.eyebrow {
+		margin-bottom: 20px;
 	}
 
 	h1 {
 		font-family: var(--font-display);
-		font-optical-sizing: auto;
-		font-size: clamp(2.4rem, 5.4vw, 4.35rem);
+		font-size: clamp(2.6rem, 5.2vw, 4rem);
 		font-weight: 800;
-		letter-spacing: -0.045em;
-		line-height: 0.98;
-		margin: 0 0 18px;
-		color: var(--landing-text);
-		text-shadow:
-			2px 2px 4px var(--neo-lo),
-			-1px -1px 2px var(--neo-hi);
-		animation: rise 0.9s ease 0.06s both;
+		letter-spacing: -0.035em;
+		line-height: 1.04;
+		margin: 0 0 20px;
 	}
 
-	h1 em {
-		font-style: italic;
-		font-weight: 800;
-		display: block;
+	.grad {
 		background: linear-gradient(120deg, var(--accent-bright), var(--up));
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
-		text-shadow: none;
-		filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--up) 25%, transparent));
 	}
 
 	.sub {
-		color: var(--landing-dim);
-		font-size: 17px;
-		line-height: 1.55;
-		max-width: 42ch;
-		margin: 0 0 28px;
-		animation: rise 0.9s ease 0.12s both;
+		color: var(--text-dim);
+		font-size: 17.5px;
+		line-height: 1.6;
+		max-width: 46ch;
+		margin: 0 0 30px;
 	}
 
 	.cta-row {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center;
-		gap: 16px 20px;
-		animation: rise 0.9s ease 0.18s both;
+		gap: 12px;
 	}
 
-	.neo-cta {
+	.btn-lg {
+		padding: 14px 28px;
+		font-size: 15.5px;
+	}
+
+	.hero-visual {
+		position: relative;
+		animation: rise 0.8s ease 0.1s both;
+	}
+
+	.ascend {
+		width: 100%;
+		height: auto;
+		display: block;
+		overflow: visible;
+	}
+
+	.axis {
+		stroke: var(--border);
+		stroke-width: 1.5;
+	}
+
+	.ascend-fill {
+		fill: color-mix(in srgb, var(--up) 7%, transparent);
+	}
+
+	.ascend-line {
+		stroke: var(--up);
+		stroke-width: 3;
+		fill: none;
+		stroke-linecap: round;
+		stroke-dasharray: 620;
+		stroke-dashoffset: 620;
+		animation: draw 1.8s ease 0.3s forwards;
+	}
+
+	.pt {
+		fill: var(--bg);
+		stroke: var(--border-strong);
+		stroke-width: 2;
+	}
+
+	.pt.done {
+		fill: color-mix(in srgb, var(--up) 30%, var(--bg));
+		stroke: var(--up);
+	}
+
+	.pt.gap {
+		fill: color-mix(in srgb, var(--warn) 35%, var(--bg));
+		stroke: var(--warn);
+	}
+
+	.pt.next {
+		fill: var(--up);
+		stroke: var(--up);
+		filter: drop-shadow(0 0 10px color-mix(in srgb, var(--up) 60%, transparent));
+	}
+
+	.tag {
+		position: absolute;
+		padding: 4px 10px;
+		border-radius: 999px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.03em;
+		white-space: nowrap;
+	}
+
+	.tag-done {
+		left: 2%;
+		bottom: 4%;
+		color: var(--text-faint);
+	}
+
+	.tag-gap-lbl {
+		left: 66%;
+		top: 26%;
+		color: var(--warn);
+		border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+	}
+
+	.tag-next-lbl {
+		right: 0;
+		top: -4%;
+		color: var(--up);
+		border-color: color-mix(in srgb, var(--up) 40%, var(--border));
+	}
+
+	/* Stats strip */
+	.stats {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		max-width: 1180px;
+		margin: 0 auto;
+		padding: 28px clamp(20px, 4vw, 48px);
+		border-top: 1px solid var(--border);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.stat {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 0 20px;
+		border-left: 1px solid var(--border);
+		animation: rise 0.6s ease calc(var(--i) * 0.06s) both;
+	}
+
+	.stat:first-child {
+		border-left: none;
+		padding-left: 0;
+	}
+
+	.stat-k {
+		font-family: var(--font-display);
+		font-size: 1.8rem;
+		font-weight: 800;
+		color: var(--text);
+	}
+
+	.stat-v {
+		font-size: 13px;
+		color: var(--text-faint);
+		line-height: 1.4;
+	}
+
+	/* Shared section heading */
+	.how,
+	.pillars,
+	.usecases {
+		max-width: 1180px;
+		margin: 0 auto;
+		padding: 76px clamp(20px, 4vw, 48px);
+	}
+
+	.how h2,
+	.pillars h2,
+	.usecases h2 {
+		font-family: var(--font-display);
+		font-size: clamp(1.6rem, 3vw, 2.2rem);
+		letter-spacing: -0.02em;
+		max-width: 20ch;
+		margin: 14px 0 44px;
+	}
+
+	/* How it works */
+	.steps {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 0;
+		position: relative;
+	}
+
+	.steps::before {
+		content: '';
+		position: absolute;
+		top: 17px;
+		left: 4%;
+		right: 4%;
+		height: 1.5px;
+		background: repeating-linear-gradient(
+			90deg,
+			var(--border-strong) 0 8px,
+			transparent 8px 14px
+		);
+	}
+
+	.step {
+		position: relative;
+		padding: 0 22px 0 0;
+		animation: rise 0.6s ease calc(var(--i) * 0.08s) both;
+	}
+
+	.step-n {
+		position: relative;
+		z-index: 1;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		padding: 16px 28px;
-		border-radius: 18px;
-		background: var(--neo);
-		color: var(--landing-text);
-		font-family: var(--font-display);
-		font-size: 16.5px;
-		font-weight: 800;
-		letter-spacing: -0.02em;
-		text-decoration: none;
-		box-shadow:
-			var(--neo-convex),
-			inset 0 0 0 1px color-mix(in srgb, var(--up) 38%, transparent),
-			0 0 28px color-mix(in srgb, var(--up) 16%, transparent);
-		transition:
-			box-shadow 0.18s ease,
-			transform 0.18s ease;
-	}
-
-	.neo-cta:hover {
-		text-decoration: none;
-		transform: translateY(-2px);
-		box-shadow:
-			12px 14px 26px var(--neo-lo),
-			-8px -8px 18px var(--neo-hi),
-			inset 0 0 0 1px color-mix(in srgb, var(--up) 55%, transparent),
-			0 0 36px color-mix(in srgb, var(--up) 22%, transparent);
-	}
-
-	.neo-cta:active {
-		transform: translateY(1px);
-		box-shadow: var(--neo-press);
-	}
-
-	.cta-hint {
-		color: var(--landing-faint);
-		font-size: 13px;
-		max-width: 16ch;
-		line-height: 1.35;
-	}
-
-	.chamber {
-		perspective: 1400px;
-		perspective-origin: 50% 42%;
-		height: min(560px, 72vw);
-		animation: chamber-in 1.15s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
-	}
-
-	.scene {
-		position: relative;
-		width: 100%;
-		height: 100%;
-		transform-style: preserve-3d;
-		transition: transform 0.22s ease-out;
-	}
-
-	.scene.still {
-		transform: none !important;
-		transition: none;
-	}
-
-	.floor {
-		position: absolute;
-		left: 2%;
-		top: 38%;
-		width: 96%;
-		height: 78%;
-		border-radius: 28px;
-		transform: rotateX(68deg) translateZ(-48px);
-		transform-origin: center;
-		background:
-			linear-gradient(var(--grid) 1px, transparent 1px),
-			linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-		background-size: 34px 34px;
-		mask-image: radial-gradient(ellipse at 50% 30%, black 12%, transparent 72%);
-		box-shadow: 0 40px 80px rgba(0, 0, 0, 0.28);
-	}
-
-	.threads {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		overflow: visible;
-		transform: translateZ(8px);
-	}
-
-	.thread {
-		stroke: color-mix(in srgb, var(--up) 70%, var(--accent));
-		stroke-width: 0.45;
-		stroke-linecap: round;
-		fill: none;
-		opacity: 0.7;
-		stroke-dasharray: 80;
-		stroke-dashoffset: 80;
-		animation: thread-draw 1.6s ease forwards;
-		animation-delay: var(--d);
-	}
-
-	.node {
-		position: absolute;
-		left: var(--x);
-		top: var(--y);
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 8px;
-		transform: translate3d(-50%, -50%, var(--z));
-		transform-style: preserve-3d;
-		animation: float 6.4s ease-in-out infinite;
-		animation-delay: var(--delay);
-	}
-
-	.orb {
-		width: 54px;
-		height: 54px;
+		width: 36px;
+		height: 36px;
 		border-radius: 50%;
-		background:
-			radial-gradient(circle at 32% 28%, color-mix(in srgb, white 26%, var(--neo)), var(--neo) 58%);
-		box-shadow: var(--neo-convex);
-	}
-
-	.n-label {
-		font-size: 11.5px;
-		font-weight: 700;
-		letter-spacing: 0.02em;
-		color: var(--landing-dim);
-		white-space: nowrap;
-		padding: 4px 9px;
-		border-radius: 999px;
-		background: var(--neo);
-		box-shadow: var(--neo-convex);
-	}
-
-	.node.done .orb {
-		background:
-			radial-gradient(circle at 32% 28%, color-mix(in srgb, white 30%, var(--up)), color-mix(in srgb, var(--up) 45%, var(--neo)) 62%);
-		box-shadow:
-			var(--neo-convex),
-			0 0 18px color-mix(in srgb, var(--up) 28%, transparent);
-	}
-
-	.node.gap .orb {
-		background:
-			radial-gradient(circle at 32% 28%, color-mix(in srgb, white 28%, var(--warn)), color-mix(in srgb, var(--warn) 40%, var(--neo)) 62%);
-		box-shadow:
-			var(--neo-convex),
-			0 0 16px color-mix(in srgb, var(--warn) 30%, transparent);
-	}
-
-	.node.next {
-		z-index: 2;
-		animation-duration: 4.6s;
-	}
-
-	.node.next .orb {
-		width: 66px;
-		height: 66px;
-		background:
-			radial-gradient(circle at 32% 28%, color-mix(in srgb, white 34%, var(--up)), var(--up) 70%);
-		box-shadow:
-			var(--neo-convex),
-			0 0 0 6px color-mix(in srgb, var(--up) 18%, transparent),
-			0 0 32px color-mix(in srgb, var(--up) 40%, transparent);
-	}
-
-	.node.next .n-label {
+		background: var(--bg);
+		border: 1.5px solid var(--up);
 		color: var(--up);
-	}
-
-	.node.lock .orb {
-		width: 42px;
-		height: 42px;
-		box-shadow: var(--neo-concave);
-		opacity: 0.72;
-	}
-
-	.node.lock .n-label {
-		opacity: 0.65;
-		box-shadow: var(--neo-concave);
-	}
-
-	.callout {
-		position: absolute;
-		left: var(--x);
-		top: var(--y);
-		transform: translate3d(28px, -42px, var(--z));
-		padding: 5px 10px;
-		border-radius: 999px;
-		font-size: 10.5px;
+		font-family: var(--font-display);
 		font-weight: 800;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		background: var(--neo);
-		box-shadow: var(--neo-convex);
-		white-space: nowrap;
+		font-size: 13px;
+		margin-bottom: 18px;
 	}
 
-	.gap-tag {
-		color: var(--warn);
-		transform: translate3d(30px, 28px, var(--z));
+	.step h3 {
+		font-size: 1.05rem;
+		margin-bottom: 8px;
 	}
 
-	.next-tag {
-		color: var(--up);
+	.step p {
+		font-size: 14px;
+		color: var(--text-dim);
+		line-height: 1.55;
+		margin: 0;
 	}
 
-	.pillars {
-		position: relative;
-		z-index: 2;
+	/* Pillars */
+	.pillar-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		gap: 22px;
-		width: min(1180px, calc(100% - 40px));
-		margin: 8px auto 0;
-		padding: 12px 0 72px;
+		gap: 20px;
 	}
 
-	.plate {
-		padding: 26px 24px 28px;
-		border-radius: 28px;
-		background: var(--neo);
-		box-shadow: var(--neo-convex);
-		transform: rotateY(calc((var(--i) - 1) * 3deg)) translateZ(calc((1 - var(--i)) * 12px));
-		animation: rise 0.9s ease calc(0.28s + var(--i) * 0.08s) both;
+	.pillar {
+		padding: 28px 24px;
+		border-radius: var(--radius);
+		border: 1px solid var(--border);
+		background: var(--bg-card);
+		transition:
+			border-color 0.2s,
+			transform 0.2s;
+		animation: rise 0.6s ease calc(var(--i) * 0.08s) both;
 	}
 
-	.plate-icon {
-		width: 52px;
-		height: 52px;
-		border-radius: 16px;
+	.pillar:hover {
+		border-color: var(--border-strong);
+		transform: translateY(-3px);
+	}
+
+	.pillar-icon {
+		width: 46px;
+		height: 46px;
+		border-radius: 12px;
 		display: grid;
 		place-items: center;
-		margin-bottom: 18px;
-		background: var(--neo);
-		box-shadow: var(--neo-concave);
+		margin-bottom: 20px;
+		background: var(--up-soft);
 		color: var(--up);
 	}
 
-	.plate-icon svg {
-		width: 26px;
-		height: 26px;
+	.pillar-icon svg {
+		width: 24px;
+		height: 24px;
 		stroke: currentColor;
 		stroke-width: 1.8;
 		stroke-linecap: round;
@@ -642,30 +557,143 @@
 		font-family: var(--font-display);
 		font-weight: 800;
 		font-size: 12px;
-		letter-spacing: 0.12em;
-		color: var(--up);
+		letter-spacing: 0.1em;
+		color: var(--text-faint);
+		margin-bottom: 6px;
+	}
+
+	.pillar h3 {
+		font-size: 1.2rem;
 		margin-bottom: 8px;
 	}
 
-	.plate h3 {
-		font-family: var(--font-display);
-		font-size: 1.28rem;
-		letter-spacing: -0.03em;
-		margin-bottom: 8px;
-		color: var(--landing-text);
-	}
-
-	.plate p {
+	.pillar p {
 		margin: 0;
 		font-size: 14.5px;
-		line-height: 1.5;
-		color: var(--landing-dim);
+		color: var(--text-dim);
+		line-height: 1.55;
+	}
+
+	/* Use cases */
+	.usecases-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-end;
+		gap: 20px;
+	}
+
+	.usecases-head h2 {
+		margin-bottom: 0;
+	}
+
+	.see-all {
+		font-weight: 650;
+		font-size: 14.5px;
+		white-space: nowrap;
+		padding-bottom: 4px;
+	}
+
+	.usecase-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 20px;
+		margin-top: 44px;
+	}
+
+	.usecase {
+		display: flex;
+		flex-direction: column;
+		padding: 26px 24px;
+		border-radius: var(--radius);
+		border: 1px solid var(--border);
+		color: var(--text);
+		background: var(--bg-elevated);
+		transition:
+			border-color 0.2s,
+			transform 0.2s,
+			background 0.2s;
+		animation: rise 0.6s ease calc(var(--i) * 0.08s) both;
+	}
+
+	.usecase:hover {
+		text-decoration: none;
+		border-color: var(--up);
+		background: var(--bg-card);
+		transform: translateY(-3px);
+	}
+
+	.usecase h3 {
+		font-size: 1.1rem;
+		margin-bottom: 10px;
+	}
+
+	.usecase p {
+		font-size: 14px;
+		color: var(--text-dim);
+		line-height: 1.55;
+		margin: 0 0 18px;
+		flex: 1;
+	}
+
+	.usecase-link {
+		font-size: 13.5px;
+		font-weight: 700;
+		color: var(--up);
+	}
+
+	/* Quote */
+	.quote {
+		max-width: 780px;
+		margin: 0 auto;
+		padding: 40px clamp(20px, 4vw, 48px) 88px;
+		text-align: center;
+	}
+
+	.quote blockquote {
+		margin: 0 0 16px;
+		font-family: var(--font-display);
+		font-size: clamp(1.3rem, 3vw, 1.9rem);
+		font-weight: 650;
+		letter-spacing: -0.02em;
+		line-height: 1.35;
+		color: var(--text);
+	}
+
+	.quote-attr {
+		margin: 0;
+		font-size: 13px;
+		font-weight: 650;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--text-faint);
+	}
+
+	/* Final CTA */
+	.final-cta {
+		max-width: 1180px;
+		margin: 0 auto 64px;
+		padding: 64px clamp(24px, 5vw, 64px);
+		border-radius: 28px;
+		text-align: center;
+		background: linear-gradient(135deg, var(--accent-soft), var(--up-soft));
+		border: 1px solid var(--border);
+	}
+
+	.final-cta h2 {
+		font-family: var(--font-display);
+		font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+		margin: 0 0 10px;
+	}
+
+	.final-cta p {
+		color: var(--text-dim);
+		margin: 0 0 26px;
 	}
 
 	@keyframes rise {
 		from {
 			opacity: 0;
-			transform: translateY(18px);
+			transform: translateY(16px);
 		}
 		to {
 			opacity: 1;
@@ -673,106 +701,60 @@
 		}
 	}
 
-	@keyframes chamber-in {
-		from {
-			opacity: 0;
-			transform: translateY(28px) scale(0.96);
-		}
-		to {
-			opacity: 1;
-			transform: none;
-		}
-	}
-
-	@keyframes thread-draw {
+	@keyframes draw {
 		to {
 			stroke-dashoffset: 0;
 		}
 	}
 
-	@keyframes float {
-		0%,
-		100% {
-			translate: 0 0;
-		}
-		50% {
-			translate: 0 -9px;
-		}
-	}
-
-	@media (max-width: 960px) {
+	@media (max-width: 900px) {
 		.hero {
 			grid-template-columns: 1fr;
-			min-height: unset;
-			padding-top: 36px;
-			gap: 12px;
 		}
 
-		.copy {
-			text-align: left;
+		.stats {
+			grid-template-columns: repeat(2, 1fr);
+			row-gap: 24px;
 		}
 
-		.chamber {
-			height: min(420px, 88vw);
+		.stat:nth-child(3) {
+			border-left: none;
+			padding-left: 0;
 		}
 
-		.pillars {
+		.steps {
 			grid-template-columns: 1fr;
+			gap: 28px;
 		}
 
-		.plate {
-			transform: none;
-		}
-	}
-
-	@media (max-width: 560px) {
-		.nav-pill {
-			width: calc(100% - 20px);
-			margin-top: 14px;
-			padding: 8px 8px 8px 14px;
-		}
-
-		h1 {
-			font-size: 2.35rem;
-		}
-
-		.cta-hint {
-			max-width: none;
-		}
-
-		.callout {
+		.steps::before {
 			display: none;
 		}
 
-		.node .n-label {
-			font-size: 10px;
+		.pillar-grid,
+		.usecase-grid {
+			grid-template-columns: 1fr;
 		}
 
-		.orb {
-			width: 44px;
-			height: 44px;
-		}
-
-		.node.next .orb {
-			width: 54px;
-			height: 54px;
+		.usecases-head {
+			flex-direction: column;
+			align-items: flex-start;
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.eyebrow,
-		h1,
-		.sub,
-		.cta-row,
-		.chamber,
-		.plate,
-		.node,
-		.thread {
+		.hero-copy,
+		.hero-visual,
+		.stat,
+		.step,
+		.pillar,
+		.usecase,
+		.ascend-line {
 			animation: none;
 		}
 
-		.scene {
-			transition: none;
+		.ascend-line {
+			stroke-dashoffset: 0;
 		}
 	}
 </style>

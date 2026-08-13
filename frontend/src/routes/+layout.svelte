@@ -50,7 +50,8 @@
 		{ href: '/profile', label: 'Profile' }
 	];
 
-	let onLanding = $derived(page.url.pathname === '/');
+	const marketingPaths = new Set(['/', '/solutions', '/pitch']);
+	let onLanding = $derived(marketingPaths.has(page.url.pathname));
 
 	let levelPct = $derived(
 		$gamification && $gamification.xp_to_next_level != null
